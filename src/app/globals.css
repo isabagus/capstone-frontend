@@ -111,3 +111,30 @@ button, a, input, select {
   background-color: #3B6FE0;
   color: #FFFFFF;
 }
+
+/* === Overlay & Micro-animations (Modal / Drawer / Skeleton) === */
+@keyframes ps-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ps-slide-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ps-slide-left { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes ps-pop { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes ps-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+
+.ps-fade-in { animation: ps-fade-in 0.15s ease-out; }
+.ps-slide-up { animation: ps-slide-up 0.2s ease-out; }
+.ps-slide-left { animation: ps-slide-left 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
+.ps-pop { animation: ps-pop 0.16s ease-out; }
+
+.ps-skeleton {
+  background: linear-gradient(90deg, #EEF1F6 0px, #F7F9FC 80px, #EEF1F6 160px);
+  background-size: 800px 100%;
+  animation: ps-shimmer 1.2s linear infinite;
+  border-radius: 6px;
+}
+.dark .ps-skeleton {
+  background: linear-gradient(90deg, #1B2A44 0px, #233554 80px, #1B2A44 160px);
+  background-size: 800px 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-fade-in, .ps-slide-up, .ps-slide-left, .ps-pop, .ps-skeleton { animation: none; }
+}

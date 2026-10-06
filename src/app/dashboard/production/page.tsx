@@ -3,6 +3,7 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBrands } from "@/hooks/useInventoryData";
 import {
   IconProduction,
   IconOrders,
@@ -139,8 +140,11 @@ export default function ProductionKanbanPage() {
     triggerToast(`Status kartu berhasil diperbarui ke tahap ${targetStage}!`);
   };
 
+  const dynamicBrands = useBrands();
+  const brands = ["Semua", ...dynamicBrands];
+
   const filteredTasks = tasks.filter((t) => {
-    if (selectedBrand !== "Semua" && t.brand !== selectedBrand) return false;
+    if (selectedBrand !== "Semua" && t.brand.toLowerCase() !== selectedBrand.toLowerCase()) return false;
     return true;
   });
 
@@ -179,7 +183,7 @@ export default function ProductionKanbanPage() {
 
           {/* Filter Brand */}
           <div className="flex items-center gap-1.5 overflow-x-auto">
-            {["Semua", "Packsolution.id", "Estella", "Pepipapier", "memoirs.print", "pikpurry"].map((b) => (
+            {brands.map((b) => (
               <button
                 key={b}
                 onClick={() => setSelectedBrand(b)}

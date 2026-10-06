@@ -3,6 +3,7 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBrands } from "@/hooks/useInventoryData";
 import {
   IconOrders,
   IconTag,
@@ -191,7 +192,8 @@ export default function OrdersPage() {
     notes: "",
   });
 
-  const brands = ["Semua", "Packsolution.id", "Estella", "Pepipapier", "memoirs.print", "pikpurry"];
+  const dynamicBrands = useBrands();
+  const brands = ["Semua", ...dynamicBrands];
   const statuses = ["Semua", "Order Placed", "Queued for Design", "Design Approved", "In-Production"];
   const priorities = ["Semua", "Normal", "High", "Express"];
 
@@ -202,7 +204,7 @@ export default function OrdersPage() {
 
   // Filtered orders
   const filteredOrders = orders.filter((o) => {
-    if (selectedBrand !== "Semua" && o.brand !== selectedBrand) return false;
+    if (selectedBrand !== "Semua" && o.brand.toLowerCase() !== selectedBrand.toLowerCase()) return false;
     if (selectedStatus !== "Semua" && o.status !== selectedStatus) return false;
     if (selectedPriority !== "Semua" && o.priority !== selectedPriority) return false;
     if (

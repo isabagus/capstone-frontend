@@ -523,6 +523,111 @@ export function IconDollar({ size = 18, strokeWidth = 1.75, className, ...props 
   );
 }
 
+// 42. Box (Produk jadi)
+export function IconBox({ size = 18, strokeWidth = 1.75, className, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+      <path d="m3.3 7 8.7 5 8.7-5" />
+      <path d="M12 22V12" />
+    </svg>
+  );
+}
+
+// 43. Wrench (Sparepart)
+export function IconWrench({ size = 18, strokeWidth = 1.75, className, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+    </svg>
+  );
+}
+
+// 44. Ruler (Satuan)
+export function IconRuler({ size = 18, strokeWidth = 1.75, className, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z" />
+      <path d="m14.5 12.5 2-2" />
+      <path d="m11.5 9.5 2-2" />
+      <path d="m8.5 6.5 2-2" />
+      <path d="m17.5 15.5 2-2" />
+    </svg>
+  );
+}
+
+// 45. Folder (Kategori)
+export function IconFolder({ size = 18, strokeWidth = 1.75, className, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+    </svg>
+  );
+}
+
+// 46. Arrow Down To Line (Barang Masuk)
+export function IconArrowIn({ size = 18, strokeWidth = 1.75, className, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d="M12 3v12" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M5 21h14" />
+    </svg>
+  );
+}
+
+// 47. Arrow Up From Line (Barang Keluar)
+export function IconArrowOut({ size = 18, strokeWidth = 1.75, className, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d="M12 21V9" />
+      <path d="m7 14 5-5 5 5" />
+      <path d="M5 3h14" />
+    </svg>
+  );
+}
+
+// 48. Clipboard Check (Stock Opname)
+export function IconClipboardCheck({ size = 18, strokeWidth = 1.75, className, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      <path d="m9 14 2 2 4-4" />
+    </svg>
+  );
+}
+
+// 49. Chevron
+export function IconChevron({ size = 18, strokeWidth = 1.75, className, direction = "down", ...props }: IconProps & { direction?: "up" | "down" | "left" | "right" }) {
+  const d = { up: "m18 15-6-6-6 6", down: "m6 9 6 6 6-6", left: "m15 18-6-6 6-6", right: "m9 18 6-6-6-6" }[direction];
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d={d} />
+    </svg>
+  );
+}
+
+// 50. Sort (Chevrons Up-Down)
+export function IconSort({ size = 18, strokeWidth = 1.75, className, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d="m7 15 5 5 5-5" />
+      <path d="m7 9 5-5 5 5" />
+    </svg>
+  );
+}
+
+// 51. Power (Nonaktifkan)
+export function IconPower({ size = 18, strokeWidth = 1.75, className, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d="M12 2v10" />
+      <path d="M18.4 6.6a9 9 0 1 1-12.77.04" />
+    </svg>
+  );
+}
+
 // Dynamic Navigation Icon Resolver
 export function renderNavIcon(id: string, className?: string, size = 16) {
   switch (id) {
@@ -550,6 +655,25 @@ export function renderNavIcon(id: string, className?: string, size = 16) {
       return <IconAudit size={size} className={className} />;
     case "users":
       return <IconUsers size={size} className={className} />;
+    // --- Staf Gudang ---
+    case "inv-products":
+      return <IconBox size={size} className={className} />;
+    case "inv-materials":
+      return <IconLayers size={size} className={className} />;
+    case "inv-spareparts":
+      return <IconWrench size={size} className={className} />;
+    case "master-suppliers":
+      return <IconTruck size={size} className={className} />;
+    case "master-brands":
+      return <IconTag size={size} className={className} />;
+    case "master-warehouses":
+      return <IconWarehouse size={size} className={className} />;
+    case "master-units":
+      return <IconRuler size={size} className={className} />;
+    case "cat-products":
+    case "cat-materials":
+    case "cat-spareparts":
+      return <IconFolder size={size} className={className} />;
     default:
       return <IconDashboard size={size} className={className} />;
   }

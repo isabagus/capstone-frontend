@@ -27,6 +27,7 @@ export default function BottomNav({ onOpenMenu, onOpenRopModal }: BottomNavProps
       case "quality_control":
         return { id: "qc", label: "QC", href: "/dashboard/qc" };
       case "staf_gudang":
+        return { id: "inv-materials", label: "Bahan Baku", href: "/dashboard/inventory/materials" };
       case "manager":
       case "owner":
       default:

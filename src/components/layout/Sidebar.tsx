@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavItems } from "@/config/navigation";
+import { useNavGroups, isNavActive } from "@/config/navigation";
 import { renderNavIcon, IconLogOut } from "@/components/icons/Icons";
+import Can from "@/components/auth/Can";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -14,7 +15,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
-  const navItems = useNavItems();
+  const navGroups = useNavGroups();
 
   const handleLogout = async () => {
     await logout();
@@ -43,14 +44,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* Logo & Brand Header */}
         <div className="h-16 flex items-center gap-3 px-5 border-b border-[#E2E6ED] dark:border-[#26334D] flex-shrink-0">
           <div className="h-9 w-9 rounded-lg bg-[#2B5FC7] dark:bg-[#3B6FE0] flex items-center justify-center font-bold text-white text-sm shadow-sm flex-shrink-0">
-            PS
+            ERP
           </div>
           <div className="min-w-0">
             <div className="font-bold text-[#1B2436] dark:text-[#E8ECF3] text-sm truncate leading-tight tracking-tight">
-              Packsolution
+              ERP Percetakan
             </div>
             <div className="text-[11px] font-medium text-[#2B5FC7] dark:text-[#3B6FE0]">
-              ERP / CRM Percetakan
+              CV Solusi Inovasi Packaging
             </div>
           </div>
         </div>
@@ -73,34 +74,52 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
 
         {/* Nav Items */}
-        <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
-          {navItems.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/dashboard" && pathname.startsWith(item.href));
+        <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1" aria-label="Menu utama">
+          {navGroups.map((group, gi) => (
+            <div key={group.id} className={group.label ? (gi > 0 ? "pt-3" : "") : "space-y-1"}>
+              {group.label && (
+                <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#6B7684] dark:text-[#8A94A6]">
+                  {group.label}
+                </div>
+              )}
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const isActive = isNavActive(pathname, item.href);
 
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                onClick={onClose}
-                id={`nav-${item.id}`}
-                className={`
-                  flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors
-                  ${
-                    isActive
-                      ? "bg-[#2B5FC7] text-white dark:bg-[#3B6FE0] dark:text-white shadow-sm"
-                      : "text-[#6B7684] hover:text-[#1B2436] hover:bg-[#F4F6FA] dark:text-[#8A94A6] dark:hover:text-[#E8ECF3] dark:hover:bg-[#1B2A44]"
-                  }
-                `}
-              >
-                <span className="flex-shrink-0">
-                  {renderNavIcon(item.id, isActive ? "text-white" : "text-current", 16)}
-                </span>
-                <span className="truncate">{item.label}</span>
-              </Link>
-            );
-          })}
+                  const link = (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      onClick={onClose}
+                      id={`nav-${item.id}`}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`
+                        flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors
+                        ${
+                          isActive
+                            ? "bg-[#2B5FC7] text-white dark:bg-[#3B6FE0] dark:text-white shadow-sm"
+                            : "text-[#6B7684] hover:text-[#1B2436] hover:bg-[#F4F6FA] dark:text-[#8A94A6] dark:hover:text-[#E8ECF3] dark:hover:bg-[#1B2A44]"
+                        }
+                      `}
+                    >
+                      <span className="flex-shrink-0">
+                        {renderNavIcon(item.id, isActive ? "text-white" : "text-current", 16)}
+                      </span>
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  );
+
+                  return item.permission ? (
+                    <Can key={item.id} permission={item.permission}>
+                      {link}
+                    </Can>
+                  ) : (
+                    link
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* Logout Button */}
