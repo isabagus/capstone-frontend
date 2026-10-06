@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useNavItems } from "@/config/navigation";
+import { useNavItems, useNavGroups, isNavActive } from "@/config/navigation";
 import { renderNavIcon, IconLogOut, IconShield } from "@/components/icons/Icons";
+import Can from "@/components/auth/Can";
 
 const DEMO_ACCOUNTS = [
   { role: "Owner",          email: "owner@packsolution.dev" },
@@ -27,6 +28,8 @@ export default function MobileMenuSheet({ isOpen, onClose }: MobileMenuSheetProp
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
   const navItems = useNavItems();
+  const navGroups = useNavGroups();
+  const isGrouped = navGroups.length > 1;
 
   if (!isOpen) return null;
 
@@ -111,6 +114,41 @@ export default function MobileMenuSheet({ isOpen, onClose }: MobileMenuSheetProp
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
           {/* Navigation Modules */}
+          {isGrouped ? (
+            navGroups.map((group) => (
+              <section key={group.id}>
+                <div className="text-[11px] font-semibold text-[#6B7684] dark:text-[#8A94A6] uppercase tracking-wider mb-2">
+                  {group.label ?? "Utama"}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {group.items.map((item) => {
+                    const isActive = isNavActive(pathname, item.href);
+                    return (
+                      <Can key={item.id} permission={item.permission ?? "public"}>
+                        <Link
+                          href={item.href}
+                          onClick={onClose}
+                          aria-current={isActive ? "page" : undefined}
+                          className={`flex items-center gap-2.5 p-2.5 min-h-[44px] rounded-lg border transition-colors active:scale-98 ${
+                            isActive
+                              ? "bg-[#2B5FC7] border-[#2B5FC7] text-white dark:bg-[#3B6FE0] dark:border-[#3B6FE0]"
+                              : "bg-[#F4F6FA] dark:bg-[#1B2A44] border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3] hover:border-[#2B5FC7]"
+                          }`}
+                        >
+                          <span className="flex-shrink-0">
+                            {renderNavIcon(item.id, isActive ? "text-white" : "text-[#2B5FC7] dark:text-[#3B6FE0]", 18)}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="text-xs font-medium truncate">{item.label}</div>
+                          </div>
+                        </Link>
+                      </Can>
+                    );
+                  })}
+                </div>
+              </section>
+            ))
+          ) : (
           <section>
             <div className="text-[11px] font-semibold text-[#6B7684] dark:text-[#8A94A6] uppercase tracking-wider mb-2">
               Modul Sistem ({navItems.length})
@@ -142,6 +180,7 @@ export default function MobileMenuSheet({ isOpen, onClose }: MobileMenuSheetProp
               })}
             </div>
           </section>
+          )}
 
           {/* Quick Demo Role Switcher */}
           <section className="bg-[#F4F6FA] dark:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] rounded-xl p-3">

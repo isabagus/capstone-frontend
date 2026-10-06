@@ -5,6 +5,7 @@ import Link from "next/link";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavItems, NavItem } from "@/config/navigation";
+import { useBrands } from "@/hooks/useInventoryData";
 import {
   IconTag,
   IconWarehouse,
@@ -37,6 +38,7 @@ interface StatWidget {
   change?: string;
   changeType?: "positive" | "negative" | "neutral";
   iconKey: string;
+  href?: string;
 }
 
 const ROLE_WIDGETS: Record<string, StatWidget[]> = {
@@ -77,10 +79,10 @@ const ROLE_WIDGETS: Record<string, StatWidget[]> = {
     { title: "Ready to Deliver", value: "9 Order", desc: "Siap packing & kirim", change: "Gudang 1", changeType: "positive", iconKey: "truck" },
   ],
   staf_gudang: [
-    { title: "Item di Bawah ROP", value: "3 SKU", desc: "Ivory 300gr & Tinta Hitam", change: "Perlu PO", changeType: "negative", iconKey: "alert" },
-    { title: "Total SKU Material", value: "48 SKU", desc: "4 Kategori material", change: "Aktif", changeType: "neutral", iconKey: "package" },
-    { title: "Transfer Antar-Gudang", value: "2 Mutasi", desc: "Gudang 1 -> Gudang 2", change: "ACID Locked", changeType: "positive", iconKey: "refresh" },
-    { title: "Batch Mendekati Exp.", value: "1 Lot", desc: "Tinta UV Cyan (30 hari)", change: "Pantau", changeType: "neutral", iconKey: "calendar" },
+    { title: "Item di Bawah ROP", value: "3 SKU", desc: "Ivory 300gr & Tinta Hitam", change: "Perlu PO", changeType: "negative", iconKey: "alert", href: "/dashboard/inventory/materials?status=below" },
+    { title: "Total SKU Material", value: "48 SKU", desc: "4 Kategori material", change: "Aktif", changeType: "neutral", iconKey: "package", href: "/dashboard/inventory/materials" },
+    { title: "Transfer Antar-Gudang", value: "2 Mutasi", desc: "Gudang 1 -> Gudang 2", change: "ACID Locked", changeType: "positive", iconKey: "refresh", href: "/dashboard/inventory/materials?tab=movements" },
+    { title: "Batch Mendekati Exp.", value: "1 Lot", desc: "Tinta UV Cyan (30 hari)", change: "Pantau", changeType: "neutral", iconKey: "calendar", href: "/dashboard/inventory/materials?filter=expiring" },
   ],
 };
 
@@ -121,6 +123,7 @@ interface OrderData {
   status: "Selesai" | "Proses" | "Menunggu" | "Kritis";
   warehouse: "Gudang 1" | "Gudang 2";
   date: string;
+  materialReqs?: string;
 }
 
 const SAMPLE_ORDERS: OrderData[] = [
@@ -135,6 +138,7 @@ const SAMPLE_ORDERS: OrderData[] = [
     status: "Proses",
     warehouse: "Gudang 1",
     date: "24 Sep 2026",
+    materialReqs: "Hardboard 2mm (650 lbr), Art Carton 260gr (12 rim), Foil Gold (2 roll)",
   },
   {
     id: "2",
@@ -147,6 +151,7 @@ const SAMPLE_ORDERS: OrderData[] = [
     status: "Menunggu",
     warehouse: "Gudang 2",
     date: "24 Sep 2026",
+    materialReqs: "Ivory 300gr (20 rim), Laminasi Doff (3 roll)",
   },
   {
     id: "3",
@@ -159,6 +164,7 @@ const SAMPLE_ORDERS: OrderData[] = [
     status: "Selesai",
     warehouse: "Gudang 1",
     date: "23 Sep 2026",
+    materialReqs: "Ivory 250gr (4 rim), Foil Gold (1 roll)",
   },
   {
     id: "4",
@@ -171,6 +177,7 @@ const SAMPLE_ORDERS: OrderData[] = [
     status: "Proses",
     warehouse: "Gudang 2",
     date: "23 Sep 2026",
+    materialReqs: "Hardboard 3mm (180 lbr), Art Paper 150gr (8 rim), Lem Kuning (6 kg)",
   },
   {
     id: "5",
@@ -183,7 +190,14 @@ const SAMPLE_ORDERS: OrderData[] = [
     status: "Kritis",
     warehouse: "Gudang 1",
     date: "22 Sep 2026",
+    materialReqs: "Film ALU (6 roll), Tinta UV Cyan (2 kg)",
   },
+];
+
+const ROP_WARNINGS = [
+  { id: "m-1", code: "BB-IVR-300", name: "Ivory 300gr", stock: 40, rop: 60, unit: "Rim", status: "Kritis" },
+  { id: "m-6", code: "BB-KRF-275", name: "Kraft Liner Brown 275gr", stock: 16, rop: 35, unit: "Rim", status: "Kritis" },
+  { id: "m-9", code: "BB-INK-CYN", name: "Tinta UV Cyan", stock: 6, rop: 10, unit: "Kg", status: "Mendekati ROP" },
 ];
 
 export default function DashboardPage() {
@@ -191,14 +205,18 @@ export default function DashboardPage() {
   const navItems = useNavItems();
   const [selectedBrandFilter, setSelectedBrandFilter] = useState<string>("Semua");
 
-  const widgets = ROLE_WIDGETS[user?.role ?? ""] ?? ROLE_WIDGETS.owner;
+  const normalizedRole = (user?.role || "").toLowerCase().trim().replace(/[\s-]+/g, "_");
+  const isGudang = normalizedRole === "staf_gudang";
 
-  const brands = ["Semua", "Packsolution.id", "Estella", "Pepipapier", "memoirs.print", "pikpurry"];
+  const widgets = ROLE_WIDGETS[normalizedRole] ?? ROLE_WIDGETS.owner;
+
+  const dynamicBrands = useBrands();
+  const brands = ["Semua", ...dynamicBrands];
 
   const filteredOrders =
     selectedBrandFilter === "Semua"
       ? SAMPLE_ORDERS
-      : SAMPLE_ORDERS.filter((o) => o.brand === selectedBrandFilter);
+      : SAMPLE_ORDERS.filter((o) => o.brand.toLowerCase() === selectedBrandFilter.toLowerCase());
 
   const renderPriorityBadge = (priority: "Normal" | "High" | "Urgent") => {
     switch (priority) {
@@ -275,21 +293,42 @@ export default function DashboardPage() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2.5 flex-shrink-0">
-            <button
-              type="button"
-              className="px-3.5 py-2 rounded-lg text-xs font-medium border border-[#2B5FC7] text-[#2B5FC7] hover:bg-[#2B5FC7]/10 dark:border-[#3B6FE0] dark:text-[#3B6FE0] dark:hover:bg-[#3B6FE0]/15 transition-colors flex items-center gap-1.5"
-            >
-              <IconRefresh size={13} />
-              <span>Refresh Data</span>
-            </button>
-            <button
-              type="button"
-              className="px-3.5 py-2 rounded-lg text-xs font-medium bg-[#2B5FC7] hover:bg-[#1D4FB8] dark:bg-[#3B6FE0] dark:hover:bg-[#2B5FC7] text-white shadow-sm transition-colors flex items-center gap-1.5"
-            >
-              <IconPlus size={13} strokeWidth={2.5} />
-              <span>Buat Pesanan Baru</span>
-            </button>
+          <div className="flex flex-wrap items-center gap-2.5 flex-shrink-0">
+            {isGudang ? (
+              <>
+                <Link
+                  href="/dashboard/inventory/materials?action=transfer"
+                  className="px-3.5 py-2 min-h-[40px] rounded-lg text-xs font-medium border border-[#2B5FC7] text-[#2B5FC7] hover:bg-[#2B5FC7]/10 dark:border-[#3B6FE0] dark:text-[#93B4F5] dark:hover:bg-[#3B6FE0]/15 transition-colors flex items-center gap-1.5"
+                >
+                  <IconRefresh size={14} />
+                  <span>Transfer Stok</span>
+                </Link>
+                <Link
+                  href="/dashboard/inventory/materials?action=stock_in"
+                  className="px-3.5 py-2 min-h-[40px] rounded-lg text-xs font-medium bg-[#2B5FC7] hover:bg-[#1D4FB8] dark:bg-[#3B6FE0] dark:hover:bg-[#2B5FC7] text-white shadow-sm transition-colors flex items-center gap-1.5"
+                >
+                  <IconPlus size={14} strokeWidth={2.5} />
+                  <span>Catat Barang Masuk</span>
+                </Link>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="px-3.5 py-2 min-h-[40px] rounded-lg text-xs font-medium border border-[#2B5FC7] text-[#2B5FC7] hover:bg-[#2B5FC7]/10 dark:border-[#3B6FE0] dark:text-[#3B6FE0] dark:hover:bg-[#3B6FE0]/15 transition-colors flex items-center gap-1.5"
+                >
+                  <IconRefresh size={13} />
+                  <span>Refresh Data</span>
+                </button>
+                <button
+                  type="button"
+                  className="px-3.5 py-2 min-h-[40px] rounded-lg text-xs font-medium bg-[#2B5FC7] hover:bg-[#1D4FB8] dark:bg-[#3B6FE0] dark:hover:bg-[#2B5FC7] text-white shadow-sm transition-colors flex items-center gap-1.5"
+                >
+                  <IconPlus size={13} strokeWidth={2.5} />
+                  <span>Buat Pesanan Baru</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -305,47 +344,175 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {widgets.map((w, i) => (
-              <div
-                key={i}
-                className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none transition-colors"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-[#6B7684] dark:text-[#8A94A6]">
-                    {w.title}
-                  </span>
-                  <span className="p-1.5 rounded-lg bg-[#F4F6FA] dark:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] flex items-center justify-center">
-                    {renderWidgetIcon(w.iconKey)}
-                  </span>
-                </div>
-
-                <div className="text-2xl font-bold text-[#1B2436] dark:text-[#E8ECF3] mb-1 tracking-tight">
-                  {w.value}
-                </div>
-
-                <div className="flex items-center justify-between text-xs pt-1 border-t border-[#E2E6ED]/60 dark:border-[#26334D]/60 mt-2">
-                  <span className="text-[#6B7684] dark:text-[#8A94A6] text-[11px] truncate">
-                    {w.desc}
-                  </span>
-                  {w.change && (
-                    <span
-                      className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${w.changeType === "positive"
-                          ? "bg-[#ECFDF5] text-[#065F46] dark:bg-[#064E3B]/30 dark:text-[#34D399]"
-                          : w.changeType === "negative"
-                            ? "bg-[#FEF2F2] text-[#991B1B] dark:bg-[#7F1D1D]/30 dark:text-[#F87171]"
-                            : "bg-[#F4F6FA] text-[#6B7684] dark:bg-[#1B2A44] dark:text-[#8A94A6]"
-                        }`}
-                    >
-                      {w.change}
+            {widgets.map((w, i) => {
+              const cardContent = (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-[#6B7684] dark:text-[#8A94A6] flex items-center gap-1">
+                      {w.title}
+                      {w.href && (
+                        <span className="text-[#2B5FC7] dark:text-[#93B4F5] opacity-0 group-hover:opacity-100 transition-opacity">
+                          →
+                        </span>
+                      )}
                     </span>
-                  )}
+                    <span className="p-1.5 rounded-lg bg-[#F4F6FA] dark:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] flex items-center justify-center">
+                      {renderWidgetIcon(w.iconKey)}
+                    </span>
+                  </div>
+
+                  <div className="text-2xl font-bold text-[#1B2436] dark:text-[#E8ECF3] mb-1 tracking-tight">
+                    {w.value}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-[#E2E6ED]/60 dark:border-[#26334D]/60 mt-2">
+                    <span className="text-[#6B7684] dark:text-[#8A94A6] text-[11px] truncate">
+                      {w.desc}
+                    </span>
+                    {w.change && (
+                      <span
+                        className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${w.changeType === "positive"
+                            ? "bg-[#ECFDF5] text-[#065F46] dark:bg-[#064E3B]/30 dark:text-[#34D399]"
+                            : w.changeType === "negative"
+                              ? "bg-[#FEF2F2] text-[#991B1B] dark:bg-[#7F1D1D]/30 dark:text-[#F87171]"
+                              : "bg-[#F4F6FA] text-[#6B7684] dark:bg-[#1B2A44] dark:text-[#8A94A6]"
+                          }`}
+                      >
+                        {w.change}
+                      </span>
+                    )}
+                  </div>
+                </>
+              );
+
+              return w.href ? (
+                <Link
+                  key={i}
+                  href={w.href}
+                  className="group block p-4 sm:p-5 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:border-[#2B5FC7] dark:hover:border-[#3B6FE0] transition-all"
+                >
+                  {cardContent}
+                </Link>
+              ) : (
+                <div
+                  key={i}
+                  className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none transition-colors"
+                >
+                  {cardContent}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
-        {/* Data Table Section */}
+        {/* Staf Gudang: Panel Peringatan Stok & Antrean Produksi */}
+        {isGudang && (
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Panel Peringatan Stok */}
+            <div className="lg:col-span-1 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-[#E2E6ED] dark:border-[#26334D] mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 rounded-md bg-[#FEF2F2] dark:bg-[#7F1D1D]/30 text-[#991B1B] dark:text-[#F87171]">
+                      <IconAlertTriangle size={15} />
+                    </span>
+                    <h3 className="text-xs font-bold text-[#1B2436] dark:text-[#E8ECF3] uppercase tracking-wider">
+                      Peringatan Stok ROP
+                    </h3>
+                  </div>
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-[#FEF2F2] text-[#991B1B] dark:bg-[#7F1D1D]/40 dark:text-[#F87171]">
+                    {ROP_WARNINGS.length} Bahan
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {ROP_WARNINGS.map((mat) => (
+                    <div
+                      key={mat.id}
+                      className="p-3 rounded-lg border border-[#E2E6ED] dark:border-[#26334D] bg-[#F4F6FA]/60 dark:bg-[#1B2A44]/60 flex items-center justify-between"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <div className="text-xs font-semibold text-[#1B2436] dark:text-[#E8ECF3] truncate">
+                          {mat.name}
+                        </div>
+                        <div className="text-[11px] text-[#6B7684] dark:text-[#8A94A6]">
+                          Stok: <strong className="text-[#991B1B] dark:text-[#F87171]">{mat.stock} {mat.unit}</strong> / ROP: {mat.rop} {mat.unit}
+                        </div>
+                      </div>
+                      <Link
+                        href={`/dashboard/inventory/materials?id=${mat.id}`}
+                        className="px-2.5 py-1 text-[11px] font-medium rounded-md border border-[#2B5FC7] text-[#2B5FC7] hover:bg-[#2B5FC7]/10 dark:border-[#3B6FE0] dark:text-[#93B4F5] dark:hover:bg-[#3B6FE0]/15 flex-shrink-0"
+                      >
+                        Detail
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-[#E2E6ED] dark:border-[#26334D]">
+                <Link
+                  href="/dashboard/inventory/materials?status=below"
+                  className="w-full py-2 px-3 text-xs font-medium text-center rounded-lg bg-[#EFF4FE] text-[#2B5FC7] hover:bg-[#D6E3FC] dark:bg-[#3B6FE0]/15 dark:text-[#93B4F5] dark:hover:bg-[#3B6FE0]/25 transition-colors block"
+                >
+                  Lihat Semua Bahan Di Bawah ROP →
+                </Link>
+              </div>
+            </div>
+
+            {/* Antrean Kebutuhan Bahan Produksi (Read-Only) */}
+            <div className="lg:col-span-2 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-[#E2E6ED] dark:border-[#26334D] flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-[#1B2436] dark:text-[#E8ECF3]">
+                    Kebutuhan Bahan Antrean Produksi
+                  </h3>
+                  <p className="text-xs text-[#6B7684] dark:text-[#8A94A6] mt-0.5">
+                    Informasi read-only untuk persiapan material gudang
+                  </p>
+                </div>
+                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#F4F6FA] dark:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] text-[#6B7684] dark:text-[#8A94A6]">
+                  Read-Only Info
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-[#F4F6FA] dark:bg-[#1B2A44] border-b border-[#E2E6ED] dark:border-[#26334D] text-[#6B7684] dark:text-[#8A94A6] font-semibold">
+                      <th className="py-2.5 px-4">No. Order</th>
+                      <th className="py-2.5 px-4">Brand / Produk</th>
+                      <th className="py-2.5 px-4">Kebutuhan Bahan Pokok</th>
+                      <th className="py-2.5 px-4">Prioritas</th>
+                      <th className="py-2.5 px-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E2E6ED] dark:divide-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]">
+                    {SAMPLE_ORDERS.slice(0, 4).map((row) => (
+                      <tr key={row.id} className="hover:bg-[#F4F6FA]/70 dark:hover:bg-[#1B2A44]/50">
+                        <td className="py-3 px-4 font-mono font-medium text-[#2B5FC7] dark:text-[#3B6FE0]">
+                          {row.orderNumber}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-medium">{row.product}</div>
+                          <div className="text-[11px] text-[#6B7684] dark:text-[#8A94A6]">{row.brand} ({row.quantity})</div>
+                        </td>
+                        <td className="py-3 px-4 text-[#6B7684] dark:text-[#8A94A6] max-w-xs text-[11px]">
+                          {row.materialReqs || "-"}
+                        </td>
+                        <td className="py-3 px-4">{renderPriorityBadge(row.priority)}</td>
+                        <td className="py-3 px-4">{renderStatusBadge(row.status)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Data Table Section (Antrean Pesanan Umum jika bukan Staf Gudang) */}
+        {!isGudang && (
         <section className="rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none overflow-hidden transition-colors">
           {/* Table Header & Brand Filter Bar */}
           <div className="p-4 sm:p-5 border-b border-[#E2E6ED] dark:border-[#26334D] flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -438,6 +605,7 @@ export default function DashboardPage() {
             <span>CV Solusi Inovasi Packaging · ACID Inventory Integrity</span>
           </div>
         </section>
+        )}
 
         {/* Quick Operational Modules Access */}
         <section className="rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none transition-colors">
