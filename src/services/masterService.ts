@@ -29,7 +29,7 @@ function suppliedBy(supplierId: string): SupplierWithMaterials["materials"] {
 export const supplierService = {
   async list(): Promise<SupplierWithMaterials[]> {
     try {
-      const res = await apiClient.get("/v1/suppliers");
+      const res = await apiClient.get("/suppliers");
       const list = res.data?.data ?? [];
       return list.map((s: any) => ({
         id: String(s.id),
@@ -51,7 +51,7 @@ export const supplierService = {
 
   async create(input: Omit<Supplier, "id">): Promise<Supplier> {
     try {
-      const res = await apiClient.post("/v1/suppliers", {
+      const res = await apiClient.post("/suppliers", {
         name: input.name,
         code: input.code,
         phone: input.phone,
@@ -82,7 +82,7 @@ export const supplierService = {
 
   async update(id: string, input: Omit<Supplier, "id">): Promise<Supplier> {
     try {
-      await apiClient.put(`/v1/suppliers/${id}`, {
+      await apiClient.put(`/suppliers/${id}`, {
         name: input.name,
         code: input.code,
         phone: input.phone,
@@ -110,7 +110,7 @@ export const supplierService = {
 
   async setActive(id: string, active: boolean): Promise<void> {
     try {
-      await apiClient.put(`/v1/suppliers/${id}`, { active });
+      await apiClient.put(`/suppliers/${id}`, { active });
       emit("suppliers");
     } catch {
       await delay();
@@ -123,7 +123,7 @@ export const supplierService = {
 
   async delete(id: string): Promise<void> {
     try {
-      await apiClient.delete(`/v1/suppliers/${id}`);
+      await apiClient.delete(`/suppliers/${id}`);
       emit("suppliers");
     } catch (err: any) {
       if (err.response?.data?.message) {
@@ -146,7 +146,7 @@ export interface UnitWithUsage extends Unit {
 export const unitService = {
   async list(): Promise<UnitWithUsage[]> {
     try {
-      const res = await apiClient.get("/v1/units");
+      const res = await apiClient.get("/units");
       const list = res.data?.data ?? [];
       return list.map((u: any) => ({
         id: String(u.id),
@@ -176,7 +176,7 @@ export const unitService = {
 
   async create(input: Omit<Unit, "id">): Promise<Unit> {
     try {
-      const res = await apiClient.post("/v1/units", {
+      const res = await apiClient.post("/units", {
         name: input.name,
         abbr: input.abbr,
         type: input.type,
@@ -203,7 +203,7 @@ export const unitService = {
 
   async update(id: string, input: Omit<Unit, "id">): Promise<Unit> {
     try {
-      await apiClient.put(`/v1/units/${id}`, {
+      await apiClient.put(`/units/${id}`, {
         name: input.name,
         abbr: input.abbr,
         type: input.type,
@@ -228,7 +228,7 @@ export const unitService = {
   // ---- Konversi Satuan ----
   async conversions(): Promise<UnitConversion[]> {
     try {
-      const res = await apiClient.get("/v1/unit-conversions");
+      const res = await apiClient.get("/unit-conversions");
       const list = res.data?.data ?? [];
       return list.map((c: any) => ({
         id: String(c.id),
@@ -247,12 +247,12 @@ export const unitService = {
     try {
       let res;
       if (id) {
-        res = await apiClient.put(`/v1/unit-conversions/${id}`, {
+        res = await apiClient.put(`/unit-conversions/${id}`, {
           factor: input.factor,
           note: input.note,
         });
       } else {
-        res = await apiClient.post("/v1/unit-conversions", {
+        res = await apiClient.post("/unit-conversions", {
           fromUnitId: input.fromUnitId,
           toUnitId: input.toUnitId,
           factor: input.factor,
@@ -289,7 +289,7 @@ export const unitService = {
 
   async removeConversion(id: string): Promise<void> {
     try {
-      await apiClient.delete(`/v1/unit-conversions/${id}`);
+      await apiClient.delete(`/unit-conversions/${id}`);
       emit("units");
     } catch {
       await delay();
@@ -310,7 +310,7 @@ export interface BrandWithUsage extends Brand {
 export const brandService = {
   async list(): Promise<BrandWithUsage[]> {
     try {
-      const res = await apiClient.get("/v1/brands");
+      const res = await apiClient.get("/brands");
       const list = res.data?.data ?? [];
       return list.map((b: any) => ({
         id: String(b.id),
@@ -346,7 +346,7 @@ export const brandService = {
 
   async create(input: Omit<Brand, "id">): Promise<Brand> {
     try {
-      const res = await apiClient.post("/v1/brands", {
+      const res = await apiClient.post("/brands", {
         name: input.name,
         code: input.code,
         slug: input.slug,
@@ -381,7 +381,7 @@ export const brandService = {
 
   async update(id: string, input: Omit<Brand, "id">): Promise<Brand> {
     try {
-      await apiClient.put(`/v1/brands/${id}`, {
+      await apiClient.put(`/brands/${id}`, {
         name: input.name,
         code: input.code,
         slug: input.slug,
@@ -406,7 +406,7 @@ export const brandService = {
 
   async setActive(id: string, active: boolean): Promise<void> {
     try {
-      await apiClient.put(`/v1/brands/${id}`, { active });
+      await apiClient.put(`/brands/${id}`, { active });
       emit("brands");
     } catch {
       await delay();
@@ -419,7 +419,7 @@ export const brandService = {
 
   async delete(id: string): Promise<void> {
     try {
-      await apiClient.delete(`/v1/brands/${id}`);
+      await apiClient.delete(`/brands/${id}`);
       emit("brands");
     } catch (err: any) {
       if (err.response?.data?.message) throw new ServiceError(err.response.data.message);
@@ -447,7 +447,7 @@ export interface WarehouseWithStats extends Warehouse {
 export const warehouseService = {
   async list(): Promise<WarehouseWithStats[]> {
     try {
-      const res = await apiClient.get("/v1/warehouses");
+      const res = await apiClient.get("/warehouses");
       const list = res.data?.data ?? [];
       return list.map((w: any) => ({
         id: String(w.id),
@@ -505,7 +505,7 @@ export const warehouseService = {
 
   async create(input: Omit<Warehouse, "id">): Promise<Warehouse> {
     try {
-      const res = await apiClient.post("/v1/warehouses", {
+      const res = await apiClient.post("/warehouses", {
         name: input.name,
         code: input.code,
         shortName: input.shortName,
@@ -540,7 +540,7 @@ export const warehouseService = {
 
   async update(id: string, input: Omit<Warehouse, "id">): Promise<Warehouse> {
     try {
-      await apiClient.put(`/v1/warehouses/${id}`, {
+      await apiClient.put(`/warehouses/${id}`, {
         name: input.name,
         code: input.code,
         shortName: input.shortName,
@@ -566,7 +566,7 @@ export const warehouseService = {
 
   async setActive(id: string, active: boolean): Promise<void> {
     try {
-      await apiClient.put(`/v1/warehouses/${id}`, { active });
+      await apiClient.put(`/warehouses/${id}`, { active });
       emit("warehouses");
     } catch {
       await delay();
@@ -579,7 +579,7 @@ export const warehouseService = {
 
   async delete(id: string): Promise<void> {
     try {
-      await apiClient.delete(`/v1/warehouses/${id}`);
+      await apiClient.delete(`/warehouses/${id}`);
       emit("warehouses");
     } catch (err: any) {
       if (err.response?.data?.message) throw new ServiceError(err.response.data.message);

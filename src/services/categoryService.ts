@@ -25,7 +25,7 @@ function countItems(cat: Category): number {
 export const categoryService = {
   async list(kind: CategoryKind): Promise<CategoryWithCount[]> {
     try {
-      const res = await apiClient.get(`/v1/categories?kind=${kind}`);
+      const res = await apiClient.get(`/categories?kind=${kind}`);
       const list = res.data?.data ?? [];
       return list.map((c: any) => ({
         id: String(c.id),
@@ -45,7 +45,7 @@ export const categoryService = {
 
   async create(input: Omit<Category, "id">): Promise<Category> {
     try {
-      const res = await apiClient.post("/v1/categories", {
+      const res = await apiClient.post("/categories", {
         name: input.name,
         kind: input.kind,
         description: input.description,
@@ -73,7 +73,7 @@ export const categoryService = {
 
   async update(id: string, input: Omit<Category, "id">): Promise<Category> {
     try {
-      await apiClient.put(`/v1/categories/${id}`, {
+      await apiClient.put(`/categories/${id}`, {
         name: input.name,
         kind: input.kind,
         description: input.description,
@@ -98,7 +98,7 @@ export const categoryService = {
 
   async remove(id: string): Promise<void> {
     try {
-      await apiClient.delete(`/v1/categories/${id}`);
+      await apiClient.delete(`/categories/${id}`);
       emit("categories");
     } catch (err: any) {
       if (err.response?.data?.message) throw new ServiceError(err.response.data.message);
