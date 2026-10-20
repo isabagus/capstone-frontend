@@ -21,6 +21,7 @@ import {
   IconPlus,
   IconPower,
   IconTag,
+  IconTrash,
 } from "@/components/icons/Icons";
 
 export default function BrandsPage() {
@@ -31,6 +32,8 @@ export default function BrandsPage() {
   const [editBrand, setEditBrand] = useState<BrandWithUsage | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [toggleBrand, setToggleBrand] = useState<BrandWithUsage | null>(null);
+  const [deleteBrand, setDeleteBrand] = useState<BrandWithUsage | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Form State
   const [name, setName] = useState("");
@@ -101,6 +104,21 @@ export default function BrandsPage() {
       reload();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Gagal mengubah status brand.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteBrand) return;
+    setPending(true);
+    setDeleteError(null);
+    try {
+      await brandService.delete(deleteBrand.id);
+      setDeleteBrand(null);
+      reload();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Gagal menghapus brand.");
     } finally {
       setPending(false);
     }
@@ -222,6 +240,21 @@ export default function BrandsPage() {
               <IconPower size={15} />
             </button>
           </Can>
+          {!b.active && (
+            <Can permission="master.brands.delete">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteError(null);
+                  setDeleteBrand(b);
+                }}
+                className="p-1.5 rounded text-[#64748B] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                title="Hapus Permanen Brand"
+              >
+                <IconTrash size={15} />
+              </button>
+            </Can>
+          )}
         </div>
       ),
     },
@@ -514,6 +547,27 @@ export default function BrandsPage() {
           confirmLabel={toggleBrand?.active ? "Ya, Nonaktifkan" : "Ya, Aktifkan"}
           tone={toggleBrand?.active ? "danger" : "primary"}
           pending={pending}
+        />
+
+        {/* Confirm Dialog Hapus Permanen */}
+        <ConfirmDialog
+          open={!!deleteBrand}
+          onClose={() => {
+            setDeleteBrand(null);
+            setDeleteError(null);
+          }}
+          onConfirm={handleDelete}
+          title="Hapus Permanen Brand"
+          message={
+            <span>
+              Apakah Anda yakin ingin <strong>menghapus permanen</strong> brand{" "}
+              <strong>{deleteBrand?.name}</strong>? Data yang sudah dihapus tidak dapat dikembalikan.
+            </span>
+          }
+          tone="danger"
+          confirmLabel="Ya, Hapus Permanen"
+          pending={pending}
+          error={deleteError}
         />
       </div>
     </DashboardLayout>

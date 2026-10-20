@@ -6,6 +6,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import StatusBadge from "@/components/ui/StatusBadge";
 import FormModal from "@/components/ui/FormModal";
+import DetailModal from "@/components/ui/DetailModal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Can from "@/components/auth/Can";
 import { btn, inputBase } from "@/components/ui/styles";
@@ -15,6 +16,7 @@ import type { UnitConversion, UnitType } from "@/types/inventory";
 import { formatNumber } from "@/lib/inventoryUtils";
 import {
   IconEdit,
+  IconEye,
   IconPlus,
   IconPower,
   IconRefresh,
@@ -35,6 +37,7 @@ export default function UnitsPage() {
   const [activeTab, setActiveTab] = useState<"units" | "conversions">("units");
 
   // Modals for Satuan
+  const [detailUnit, setDetailUnit] = useState<UnitWithUsage | null>(null);
   const [editUnit, setEditUnit] = useState<UnitWithUsage | null>(null);
   const [isAddUnitOpen, setIsAddUnitOpen] = useState(false);
   const [toggleUnit, setToggleUnit] = useState<UnitWithUsage | null>(null);
@@ -247,7 +250,15 @@ export default function UnitsPage() {
       header: "Aksi",
       align: "right",
       render: (u) => (
-        <div className="flex items-center justify-end gap-1">
+        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={() => setDetailUnit(u)}
+            className="p-1.5 rounded-lg text-[#6B7684] hover:text-[#2B5FC7] hover:bg-[#EFF4FE] dark:hover:bg-[#1B2A44] transition-colors"
+            title="Lihat Detail Satuan"
+          >
+            <IconEye size={16} />
+          </button>
           <Can permission="master.units.edit">
             <button
               type="button"
@@ -417,6 +428,7 @@ export default function UnitsPage() {
               u.type.toLowerCase().includes(q)
             }
             defaultSort={{ key: "name", direction: "asc" }}
+            onRowClick={(u) => setDetailUnit(u)}
             emptyTitle="Belum Ada Satuan"
             emptySubtitle="Belum ada satuan kuantitas yang terdaftar."
           />
@@ -646,6 +658,70 @@ export default function UnitsPage() {
           confirmLabel={toggleUnit?.active ? "Nonaktifkan" : "Aktifkan"}
           pending={pending}
         />
+
+        {/* Modal Pop-up Detail Satuan */}
+        <DetailModal
+          open={!!detailUnit}
+          onClose={() => setDetailUnit(null)}
+          title={detailUnit?.name || "Detail Satuan"}
+          subtitle={`Singkatan: ${detailUnit?.abbr} · Tipe: ${detailUnit?.type}`}
+        >
+          {detailUnit && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 p-4 rounded-xl border border-[#E2E6ED] dark:border-[#26334D] bg-[#F4F6FA] dark:bg-[#1B2A44] text-xs">
+                <div>
+                  <div className="text-[#6B7684] dark:text-[#8A94A6]">Nama Satuan</div>
+                  <div className="font-semibold text-sm text-[#1B2436] dark:text-[#E8ECF3] mt-0.5">{detailUnit.name}</div>
+                </div>
+                <div>
+                  <div className="text-[#6B7684] dark:text-[#8A94A6]">Singkatan</div>
+                  <div className="font-mono font-semibold text-sm text-[#2B5FC7] dark:text-[#93B4F5] mt-0.5">{detailUnit.abbr}</div>
+                </div>
+                <div>
+                  <div className="text-[#6B7684] dark:text-[#8A94A6]">Tipe Besaran</div>
+                  <div className="font-medium text-[#1B2436] dark:text-[#E8ECF3] mt-0.5">{detailUnit.type}</div>
+                </div>
+                <div>
+                  <div className="text-[#6B7684] dark:text-[#8A94A6]">Status</div>
+                  <div className="mt-0.5">
+                    <StatusBadge tone={detailUnit.active ? "green" : "gray"} dot>
+                      {detailUnit.active ? "Aktif" : "Nonaktif"}
+                    </StatusBadge>
+                  </div>
+                </div>
+                <div className="col-span-2 pt-2 border-t border-[#E2E6ED] dark:border-[#26334D]">
+                  <div className="text-[#6B7684] dark:text-[#8A94A6]">Penggunaan Dalam Sistem</div>
+                  <div className="font-medium text-[#1B2436] dark:text-[#E8ECF3] mt-0.5">
+                    {detailUnit.usage > 0 ? `Digunakan oleh ${detailUnit.usage} item bahan baku / produk / sparepart` : "Belum digunakan oleh item inventori"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Konversi Terkait Satuan Ini */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#6B7684] dark:text-[#8A94A6] mb-2">
+                  Formula Konversi Terkait
+                </h4>
+                {conversions?.filter(c => c.fromUnitId === detailUnit.id || c.toUnitId === detailUnit.id).length ? (
+                  <div className="space-y-2">
+                    {conversions.filter(c => c.fromUnitId === detailUnit.id || c.toUnitId === detailUnit.id).map(c => {
+                      const fromU = units?.find(u => u.id === c.fromUnitId);
+                      const toU = units?.find(u => u.id === c.toUnitId);
+                      return (
+                        <div key={c.id} className="p-3 rounded-lg border border-[#E2E6ED] dark:border-[#26334D] text-xs flex justify-between items-center">
+                          <span className="font-medium">1 {fromU?.abbr || c.fromUnitId} = {formatNumber(c.factor)} {toU?.abbr || c.toUnitId}</span>
+                          <span className="text-[11px] text-[#6B7684]">{c.note || "Standar konversi"}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-[#6B7684] dark:text-[#8A94A6] italic">Belum ada aturan konversi untuk satuan ini.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </DetailModal>
       </div>
     </DashboardLayout>
   );

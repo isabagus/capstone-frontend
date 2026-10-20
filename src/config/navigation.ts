@@ -33,7 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: "inventory",
     label: "Inventori Multi-Gudang",
-    href: "/dashboard/inventory",
+    href: "/dashboard/inventory/materials",
     icon: "📦",
     roles: ["owner", "manager", "staf_gudang"],
     permission: "inventory.view",
@@ -139,9 +139,16 @@ export const ROLE_NAV_GROUPS: Record<string, NavGroup[]> = {
       id: "inventory",
       label: "Inventori",
       items: [
-        { id: "inv-products", label: "Produk", href: ROUTES["inventory.products"], icon: "products", roles: SG, permission: "inventory.products.view" },
         { id: "inv-materials", label: "Bahan Baku", href: ROUTES["inventory.materials"], icon: "materials", roles: SG, permission: "inventory.materials.view" },
         { id: "inv-spareparts", label: "Sparepart", href: ROUTES["inventory.spareparts"], icon: "spareparts", roles: SG, permission: "inventory.spareparts.view" },
+        { id: "inv-products", label: "Produk Jadi", href: ROUTES["inventory.products"], icon: "products", roles: SG, permission: "inventory.products.view" },
+      ],
+    },
+    {
+      id: "transaction",
+      label: "Transaksi",
+      items: [
+        { id: "trx-history", label: "Mutasi & Riwayat Stok", href: ROUTES["transaction.history"], icon: "trx-history", roles: SG, permission: null },
       ],
     },
     {
@@ -152,15 +159,7 @@ export const ROLE_NAV_GROUPS: Record<string, NavGroup[]> = {
         { id: "master-brands", label: "Brand", href: ROUTES["master.brands"], icon: "brands", roles: SG, permission: "master.brands.view" },
         { id: "master-warehouses", label: "Gudang", href: ROUTES["master.warehouses"], icon: "warehouses", roles: SG, permission: "master.warehouses.view" },
         { id: "master-units", label: "Satuan & Konversi", href: ROUTES["master.units"], icon: "units", roles: SG, permission: "master.units.view" },
-      ],
-    },
-    {
-      id: "category",
-      label: "Kategori",
-      items: [
-        { id: "cat-products", label: "Kategori Produk", href: ROUTES["category.products"], icon: "category", roles: SG, permission: "category.products.view" },
-        { id: "cat-materials", label: "Kategori Bahan Baku", href: ROUTES["category.materials"], icon: "category", roles: SG, permission: "category.materials.view" },
-        { id: "cat-spareparts", label: "Kategori Sparepart", href: ROUTES["category.spareparts"], icon: "category", roles: SG, permission: "category.spareparts.view" },
+        { id: "master-categories", label: "Kategori", href: ROUTES["master.categories"], icon: "master-categories", roles: SG, permission: null },
       ],
     },
   ],

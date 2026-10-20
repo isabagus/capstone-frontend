@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import StatusBadge from "@/components/ui/StatusBadge";
-import Drawer from "@/components/ui/Drawer";
 import FormModal from "@/components/ui/FormModal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Can from "@/components/auth/Can";
@@ -18,17 +18,20 @@ import {
   IconEye,
   IconPlus,
   IconPower,
+  IconTrash,
   IconTruck,
 } from "@/components/icons/Icons";
 
 export default function SuppliersPage() {
+  const router = useRouter();
   const { data: suppliers, loading, error, reload } = useSuppliers();
 
-  // Modals & Drawers
-  const [detailSupplier, setDetailSupplier] = useState<SupplierWithMaterials | null>(null);
+  // Modals
   const [editSupplier, setEditSupplier] = useState<SupplierWithMaterials | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [toggleSupplier, setToggleSupplier] = useState<SupplierWithMaterials | null>(null);
+  const [deleteSupplier, setDeleteSupplier] = useState<SupplierWithMaterials | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Form State
   const [code, setCode] = useState("");
@@ -116,6 +119,21 @@ export default function SuppliersPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteSupplier) return;
+    setPending(true);
+    setDeleteError(null);
+    try {
+      await supplierService.delete(deleteSupplier.id);
+      setDeleteSupplier(null);
+      reload();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Gagal menghapus supplier.");
+    } finally {
+      setPending(false);
+    }
+  };
+
   const columns: Column<SupplierWithMaterials>[] = [
     {
       key: "code",
@@ -168,7 +186,7 @@ export default function SuppliersPage() {
       render: (s) => (
         <button
           type="button"
-          onClick={() => setDetailSupplier(s)}
+          onClick={() => router.push(`/dashboard/master/suppliers/${s.id}`)}
           className="px-2 py-0.5 rounded-full text-xs font-semibold bg-[#F4F6FA] dark:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] hover:border-[#2B5FC7] transition-colors"
         >
           {s.materials.length} item
@@ -193,7 +211,7 @@ export default function SuppliersPage() {
         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
-            onClick={() => setDetailSupplier(s)}
+            onClick={() => router.push(`/dashboard/master/suppliers/${s.id}`)}
             className="p-1.5 rounded-lg text-[#6B7684] hover:text-[#2B5FC7] hover:bg-[#EFF4FE] dark:hover:bg-[#1B2A44] transition-colors"
             title="Detail Supplier"
           >
@@ -223,6 +241,21 @@ export default function SuppliersPage() {
               <IconPower size={16} />
             </button>
           </Can>
+          {!s.active && (
+            <Can permission="master.suppliers.deactivate">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteError(null);
+                  setDeleteSupplier(s);
+                }}
+                className="p-1.5 rounded-lg text-[#6B7684] hover:text-[#DC2626] hover:bg-[#FEF2F2] dark:hover:bg-[#7F1D1D]/30 transition-colors"
+                title="Hapus Permanen Supplier"
+              >
+                <IconTrash size={16} />
+              </button>
+            </Can>
+          )}
         </div>
       ),
     },
@@ -261,84 +294,11 @@ export default function SuppliersPage() {
             s.email.toLowerCase().includes(q)
           }
           defaultSort={{ key: "code", direction: "asc" }}
-          onRowClick={(s) => setDetailSupplier(s)}
+          onRowClick={(s) => router.push(`/dashboard/master/suppliers/${s.id}`)}
           emptyTitle="Belum Ada Supplier"
           emptySubtitle="Belum ada data supplier yang terdaftar."
         />
 
-        {/* Drawer Detail Supplier & Bahan yang disuplai */}
-        <Drawer
-          open={!!detailSupplier}
-          onClose={() => setDetailSupplier(null)}
-          title={detailSupplier?.name || "Detail Supplier"}
-          subtitle={`Kode: ${detailSupplier?.code} · Jenis: ${detailSupplier?.type}`}
-          width="md"
-        >
-          {detailSupplier && (
-            <div className="space-y-6">
-              {/* Profil Kontak */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#6B7684] dark:text-[#8A94A6] mb-3">
-                  Informasi Kontak & Alamat
-                </h4>
-                <div className="p-4 rounded-xl border border-[#E2E6ED] dark:border-[#26334D] bg-[#F4F6FA] dark:bg-[#1B2A44] space-y-2 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-[#6B7684] dark:text-[#8A94A6]">Person in Charge (PIC):</span>
-                    <span className="font-semibold">{detailSupplier.pic || "-"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#6B7684] dark:text-[#8A94A6]">Telepon / WhatsApp:</span>
-                    <span className="font-semibold">{detailSupplier.phone || "-"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#6B7684] dark:text-[#8A94A6]">Email Resmi:</span>
-                    <span className="font-semibold">{detailSupplier.email || "-"}</span>
-                  </div>
-                  <div className="pt-2 border-t border-[#E2E6ED] dark:border-[#26334D]">
-                    <span className="text-[#6B7684] dark:text-[#8A94A6] block mb-1">Alamat Operasional:</span>
-                    <p className="font-medium text-[#1B2436] dark:text-[#E8ECF3] leading-relaxed">
-                      {detailSupplier.address || "Belum ada alamat terdaftar."}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Daftar Bahan yang Disuplai */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#6B7684] dark:text-[#8A94A6]">
-                    Bahan & Sparepart yang Disuplai ({detailSupplier.materials.length})
-                  </h4>
-                </div>
-
-                {detailSupplier.materials.length > 0 ? (
-                  <div className="space-y-2">
-                    {detailSupplier.materials.map((m) => (
-                      <div
-                        key={m.id}
-                        className="p-3 rounded-lg border border-[#E2E6ED] dark:border-[#26334D] flex justify-between items-center text-xs"
-                      >
-                        <div>
-                          <div className="font-semibold text-[#1B2436] dark:text-[#E8ECF3]">{m.name}</div>
-                          <div className="font-mono text-[11px] text-[#2B5FC7] dark:text-[#93B4F5] mt-0.5">
-                            {m.code}
-                          </div>
-                        </div>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#F4F6FA] dark:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D]">
-                          {m.kind}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-[#6B7684] dark:text-[#8A94A6] italic py-2">
-                    Belum ada bahan baku atau sparepart yang dihubungkan ke supplier ini.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-        </Drawer>
 
         {/* Modal Tambah / Edit Supplier */}
         <FormModal
@@ -475,6 +435,27 @@ export default function SuppliersPage() {
           tone={toggleSupplier?.active ? "danger" : "primary"}
           confirmLabel={toggleSupplier?.active ? "Nonaktifkan" : "Aktifkan"}
           pending={pending}
+        />
+
+        {/* Confirm Dialog Hapus Permanen */}
+        <ConfirmDialog
+          open={!!deleteSupplier}
+          onClose={() => {
+            setDeleteSupplier(null);
+            setDeleteError(null);
+          }}
+          onConfirm={handleDelete}
+          title="Hapus Permanen Supplier"
+          message={
+            <span>
+              Apakah Anda yakin ingin <strong>menghapus permanen</strong> supplier{" "}
+              <strong>{deleteSupplier?.name}</strong>? Data yang sudah dihapus tidak dapat dikembalikan.
+            </span>
+          }
+          tone="danger"
+          confirmLabel="Ya, Hapus Permanen"
+          pending={pending}
+          error={deleteError}
         />
       </div>
     </DashboardLayout>

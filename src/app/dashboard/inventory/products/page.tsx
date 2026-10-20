@@ -1,23 +1,30 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import FilterChips from "@/components/ui/FilterChips";
 import StatusBadge from "@/components/ui/StatusBadge";
-import Drawer from "@/components/ui/Drawer";
 import FormModal from "@/components/ui/FormModal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Can from "@/components/auth/Can";
 import { btn, cx, inputBase } from "@/components/ui/styles";
-import { useBrands, useCategories, useMovements, useProducts, useUnits, useWarehouses } from "@/hooks/useInventoryData";
+import { useBrands, useCategories, useProducts, useUnits, useWarehouses } from "@/hooks/useInventoryData";
 import { productService } from "@/services/inventoryService";
 import type { BrandName, Product, ProductType } from "@/types/inventory";
-import { formatDateTime, formatNumber, totalStock } from "@/lib/inventoryUtils";
+import {
+  findCategoryName,
+  findUnitAbbr,
+  formatNumber,
+  getWarehouseStock,
+  totalStock,
+} from "@/lib/inventoryUtils";
 import { IconBox, IconEdit, IconEye, IconPlus, IconTrash } from "@/components/icons/Icons";
 
 export default function ProductsPage() {
+  const router = useRouter();
   const { data: products, loading, error, reload } = useProducts();
   const { data: categories } = useCategories("product");
   const { data: units } = useUnits();
@@ -30,7 +37,6 @@ export default function ProductsPage() {
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("all");
 
   // Selection & Modals
-  const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
@@ -47,9 +53,6 @@ export default function ProductsPage() {
   const [minStock, setMinStock] = useState(100);
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-
-  // Detail movements
-  const { data: movements } = useMovements("product", detailProduct?.id, 10);
 
   // Filtered dataset
   const filteredProducts = useMemo(() => {
@@ -205,28 +208,28 @@ export default function ProductsPage() {
     {
       key: "category",
       header: "Kategori",
-      render: (p) => categories?.find((c) => c.id === p.categoryId)?.name ?? "-",
+      render: (p) => findCategoryName(categories, p.categoryId),
     },
     {
       key: "unit",
       header: "Satuan",
-      render: (p) => units?.find((u) => u.id === p.unitId)?.abbr ?? "-",
+      render: (p) => findUnitAbbr(units, p.unitId),
     },
     {
       key: "stock_g1",
       header: "Gudang 1",
       align: "right",
       sortable: true,
-      sortValue: (p) => p.stock.g1,
-      render: (p) => formatNumber(p.stock.g1),
+      sortValue: (p) => getWarehouseStock(p.stock, "g1"),
+      render: (p) => formatNumber(getWarehouseStock(p.stock, "g1")),
     },
     {
       key: "stock_g2",
       header: "Gudang 2",
       align: "right",
       sortable: true,
-      sortValue: (p) => p.stock.g2,
-      render: (p) => formatNumber(p.stock.g2),
+      sortValue: (p) => getWarehouseStock(p.stock, "g2"),
+      render: (p) => formatNumber(getWarehouseStock(p.stock, "g2")),
     },
     {
       key: "total_stock",
@@ -255,7 +258,7 @@ export default function ProductsPage() {
         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
-            onClick={() => setDetailProduct(p)}
+            onClick={() => router.push(`/dashboard/inventory/products/${p.id}`)}
             className="p-1.5 rounded-lg text-[#6B7684] hover:text-[#2B5FC7] hover:bg-[#EFF4FE] dark:hover:bg-[#1B2A44] transition-colors"
             title="Lihat Detail"
           >
@@ -378,133 +381,10 @@ export default function ProductsPage() {
             p.brand.toLowerCase().includes(q)
           }
           defaultSort={{ key: "sku", direction: "asc" }}
-          onRowClick={(p) => setDetailProduct(p)}
+          onRowClick={(p) => router.push(`/dashboard/inventory/products/${p.id}`)}
           emptyTitle="Belum Ada Produk"
           emptySubtitle="Belum ada produk yang sesuai dengan filter atau kata kunci pencarian."
         />
-
-        {/* Drawer Detail */}
-        <Drawer
-          open={!!detailProduct}
-          onClose={() => setDetailProduct(null)}
-          title={detailProduct?.name || "Detail Produk"}
-          subtitle={`SKU: ${detailProduct?.sku} · ${detailProduct?.brand}`}
-          width="md"
-        >
-          {detailProduct && (
-            <div className="space-y-6">
-              {/* Ringkasan Stok Gudang */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#6B7684] dark:text-[#8A94A6] mb-3">
-                  Rincian Stok Multi-Gudang
-                </h4>
-                <div className="grid grid-cols-2 gap-3">
-                  {warehouses.map((w) => (
-                    <div
-                      key={w.id}
-                      className="p-3 rounded-xl border border-[#E2E6ED] dark:border-[#26334D] bg-[#F4F6FA] dark:bg-[#1B2A44]"
-                    >
-                      <div className="text-[11px] text-[#6B7684] dark:text-[#8A94A6]">{w.name}</div>
-                      <div className="text-xl font-bold text-[#1B2436] dark:text-[#E8ECF3] mt-1">
-                        {formatNumber(detailProduct.stock[w.id])}{" "}
-                        <span className="text-xs font-normal text-[#6B7684]">
-                          {units?.find((u) => u.id === detailProduct.unitId)?.abbr}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3 p-3 rounded-lg border border-[#D6E3FC] dark:border-[#26334D] bg-[#EFF4FE] dark:bg-[#1D4ED8]/15 flex justify-between items-center text-xs">
-                  <span className="text-[#2B5FC7] dark:text-[#93B4F5] font-medium">Total Stok Seluruh Gudang:</span>
-                  <span className="font-bold text-sm text-[#2B5FC7] dark:text-[#93B4F5]">
-                    {formatNumber(totalStock(detailProduct.stock))}{" "}
-                    {units?.find((u) => u.id === detailProduct.unitId)?.abbr}
-                  </span>
-                </div>
-              </div>
-
-              {/* Atribut Produk */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#6B7684] dark:text-[#8A94A6] mb-2">
-                  Informasi Produk
-                </h4>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                  <div>
-                    <dt className="text-[#6B7684] dark:text-[#8A94A6]">Tipe Produk</dt>
-                    <dd className="font-medium mt-0.5">{detailProduct.type}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[#6B7684] dark:text-[#8A94A6]">Kategori</dt>
-                    <dd className="font-medium mt-0.5">
-                      {categories?.find((c) => c.id === detailProduct.categoryId)?.name ?? "-"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[#6B7684] dark:text-[#8A94A6]">Minimum Safety Stock</dt>
-                    <dd className="font-medium mt-0.5">
-                      {formatNumber(detailProduct.minStock)}{" "}
-                      {units?.find((u) => u.id === detailProduct.unitId)?.abbr}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[#6B7684] dark:text-[#8A94A6]">Satuan Dasar</dt>
-                    <dd className="font-medium mt-0.5">
-                      {units?.find((u) => u.id === detailProduct.unitId)?.name ?? "-"}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-
-              {/* Riwayat Mutasi Singkat */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#6B7684] dark:text-[#8A94A6] mb-2">
-                  Riwayat Mutasi Terakhir
-                </h4>
-                {movements && movements.length > 0 ? (
-                  <div className="space-y-2">
-                    {movements.map((m) => (
-                      <div
-                        key={m.id}
-                        className="p-2.5 rounded-lg border border-[#E2E6ED] dark:border-[#26334D] text-xs flex justify-between items-center"
-                      >
-                        <div>
-                          <div className="flex items-center gap-1.5 font-medium">
-                            <span
-                              className={`px-1.5 py-0.2 rounded text-[10px] ${
-                                m.type === "IN"
-                                  ? "bg-[#ECFDF5] text-[#065F46] dark:bg-[#064E3B]/30 dark:text-[#34D399]"
-                                  : m.type === "OUT"
-                                  ? "bg-[#FEF2F2] text-[#991B1B] dark:bg-[#7F1D1D]/30 dark:text-[#F87171]"
-                                  : "bg-[#EFF4FE] text-[#2B5FC7] dark:bg-[#1D4ED8]/25 dark:text-[#93C5FD]"
-                              }`}
-                            >
-                              {m.type}
-                            </span>
-                            <span>{m.qty > 0 ? `+${m.qty}` : m.qty} unit</span>
-                            <span className="text-[#6B7684] dark:text-[#8A94A6]">
-                              ({warehouses.find((w) => w.id === m.warehouse)?.shortName}
-                              {m.toWarehouse ? ` → ${warehouses.find((w) => w.id === m.toWarehouse)?.shortName}` : ""})
-                            </span>
-                          </div>
-                          <div className="text-[11px] text-[#6B7684] dark:text-[#8A94A6] mt-0.5">
-                            {m.note || m.reference || "Tanpa catatan"} · {m.user}
-                          </div>
-                        </div>
-                        <div className="text-[10px] text-[#6B7684] dark:text-[#8A94A6] text-right">
-                          {formatDateTime(m.date)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-[#6B7684] dark:text-[#8A94A6] italic py-2">
-                    Belum ada riwayat mutasi untuk produk ini.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-        </Drawer>
 
         {/* Modal Tambah / Edit Produk */}
         <FormModal

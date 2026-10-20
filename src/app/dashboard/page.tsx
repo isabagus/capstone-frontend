@@ -6,6 +6,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavItems, NavItem } from "@/config/navigation";
 import { useBrands } from "@/hooks/useInventoryData";
+import DetailModal from "@/components/ui/DetailModal";
 import {
   IconTag,
   IconWarehouse,
@@ -81,7 +82,7 @@ const ROLE_WIDGETS: Record<string, StatWidget[]> = {
   staf_gudang: [
     { title: "Item di Bawah ROP", value: "3 SKU", desc: "Ivory 300gr & Tinta Hitam", change: "Perlu PO", changeType: "negative", iconKey: "alert", href: "/dashboard/inventory/materials?status=below" },
     { title: "Total SKU Material", value: "48 SKU", desc: "4 Kategori material", change: "Aktif", changeType: "neutral", iconKey: "package", href: "/dashboard/inventory/materials" },
-    { title: "Transfer Antar-Gudang", value: "2 Mutasi", desc: "Gudang 1 -> Gudang 2", change: "ACID Locked", changeType: "positive", iconKey: "refresh", href: "/dashboard/inventory/materials?tab=movements" },
+    { title: "Transfer Antar-Gudang", value: "2 Mutasi", desc: "Gudang 1 -> Gudang 2", change: "ACID Locked", changeType: "positive", iconKey: "refresh", href: "/dashboard/transaction?type=TRANSFER" },
     { title: "Batch Mendekati Exp.", value: "1 Lot", desc: "Tinta UV Cyan (30 hari)", change: "Pantau", changeType: "neutral", iconKey: "calendar", href: "/dashboard/inventory/materials?filter=expiring" },
   ],
 };
@@ -204,6 +205,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const navItems = useNavItems();
   const [selectedBrandFilter, setSelectedBrandFilter] = useState<string>("Semua");
+  const [detailSpk, setDetailSpk] = useState<OrderData | null>(null);
 
   const normalizedRole = (user?.role || "").toLowerCase().trim().replace(/[\s-]+/g, "_");
   const isGudang = normalizedRole === "staf_gudang";
@@ -485,11 +487,16 @@ export default function DashboardPage() {
                       <th className="py-2.5 px-4">Kebutuhan Bahan Pokok</th>
                       <th className="py-2.5 px-4">Prioritas</th>
                       <th className="py-2.5 px-4">Status</th>
+                      <th className="py-2.5 px-4 text-right">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E2E6ED] dark:divide-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]">
                     {SAMPLE_ORDERS.slice(0, 4).map((row) => (
-                      <tr key={row.id} className="hover:bg-[#F4F6FA]/70 dark:hover:bg-[#1B2A44]/50">
+                      <tr
+                        key={row.id}
+                        onClick={() => setDetailSpk(row)}
+                        className="hover:bg-[#F4F6FA]/70 dark:hover:bg-[#1B2A44]/50 cursor-pointer transition-colors"
+                      >
                         <td className="py-3 px-4 font-mono font-medium text-[#2B5FC7] dark:text-[#3B6FE0]">
                           {row.orderNumber}
                         </td>
@@ -502,6 +509,15 @@ export default function DashboardPage() {
                         </td>
                         <td className="py-3 px-4">{renderPriorityBadge(row.priority)}</td>
                         <td className="py-3 px-4">{renderStatusBadge(row.status)}</td>
+                        <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => setDetailSpk(row)}
+                            className="px-2.5 py-1 rounded-md text-[11px] font-medium border border-[#2B5FC7] text-[#2B5FC7] hover:bg-[#2B5FC7]/10 dark:border-[#3B6FE0] dark:text-[#93B4F5] dark:hover:bg-[#3B6FE0]/15 transition-colors"
+                          >
+                            Detail SPK
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -565,7 +581,8 @@ export default function DashboardPage() {
                 {filteredOrders.map((row) => (
                   <tr
                     key={row.id}
-                    className="hover:bg-[#F4F6FA]/70 dark:hover:bg-[#1B2A44]/50 transition-colors"
+                    onClick={() => setDetailSpk(row)}
+                    className="hover:bg-[#F4F6FA]/70 dark:hover:bg-[#1B2A44]/50 transition-colors cursor-pointer"
                   >
                     <td className="py-3 px-4 font-mono font-medium text-[#2B5FC7] dark:text-[#3B6FE0]">
                       {row.orderNumber}
@@ -585,9 +602,10 @@ export default function DashboardPage() {
                     </td>
                     <td className="py-3 px-4">{renderPriorityBadge(row.priority)}</td>
                     <td className="py-3 px-4">{renderStatusBadge(row.status)}</td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
+                        onClick={() => setDetailSpk(row)}
                         className="px-2.5 py-1 rounded-md text-[11px] font-medium border border-[#2B5FC7] text-[#2B5FC7] hover:bg-[#2B5FC7]/10 dark:border-[#3B6FE0] dark:text-[#3B6FE0] dark:hover:bg-[#3B6FE0]/15 transition-colors"
                       >
                         Detail SPK
@@ -653,6 +671,133 @@ export default function DashboardPage() {
               ))}
           </div>
         </section>
+
+        {/* Modal Pop Up Detail SPK */}
+        <DetailModal
+          open={!!detailSpk}
+          onClose={() => setDetailSpk(null)}
+          title={`Detail SPK: ${detailSpk?.orderNumber}`}
+          subtitle={`${detailSpk?.customer} · ${detailSpk?.brand}`}
+          badge={
+            detailSpk ? (
+              <div className="flex items-center gap-1.5">
+                {renderPriorityBadge(detailSpk.priority)}
+                {renderStatusBadge(detailSpk.status)}
+              </div>
+            ) : undefined
+          }
+          icon={<IconSpk size={20} />}
+          actions={
+            <div className="flex items-center gap-2">
+              {isGudang ? (
+                <Link
+                  href="/dashboard/inventory/materials"
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#2B5FC7] hover:bg-[#1D4FB8] text-white transition-colors"
+                >
+                  Cek Bahan Baku
+                </Link>
+              ) : null}
+            </div>
+          }
+        >
+          {detailSpk && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1B2436]/60 border border-[#E2E6ED] dark:border-[#243049]">
+                  <p className="text-[11px] font-medium text-[#6B7684] dark:text-[#8A94A6]">Pelanggan</p>
+                  <p className="text-xs font-bold text-[#1B2436] dark:text-[#E8ECF3] mt-0.5 truncate">
+                    {detailSpk.customer}
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1B2436]/60 border border-[#E2E6ED] dark:border-[#243049]">
+                  <p className="text-[11px] font-medium text-[#6B7684] dark:text-[#8A94A6]">Brand Produk</p>
+                  <p className="text-xs font-bold text-[#2B5FC7] dark:text-[#93B4F5] mt-0.5">
+                    {detailSpk.brand}
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1B2436]/60 border border-[#E2E6ED] dark:border-[#243049] col-span-2 sm:col-span-1">
+                  <p className="text-[11px] font-medium text-[#6B7684] dark:text-[#8A94A6]">Tanggal Masuk</p>
+                  <p className="text-xs font-semibold text-[#1B2436] dark:text-[#E8ECF3] mt-0.5">
+                    {detailSpk.date}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#F8FAFC] dark:bg-[#1B2436]/60 border border-[#E2E6ED] dark:border-[#243049]">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-medium text-[#6B7684] dark:text-[#8A94A6]">
+                    Spesifikasi Produk Jadi
+                  </span>
+                  <span className="text-xs font-bold text-[#1B2436] dark:text-[#E8ECF3] bg-white dark:bg-[#16223A] px-2 py-0.5 rounded border border-[#E2E6ED] dark:border-[#26334D]">
+                    {detailSpk.quantity}
+                  </span>
+                </div>
+                <p className="text-sm font-bold text-[#1B2436] dark:text-[#E8ECF3]">
+                  {detailSpk.product}
+                </p>
+                <div className="mt-2 pt-2 border-t border-[#E2E6ED]/60 dark:border-[#243049] flex items-center justify-between text-xs text-[#6B7684] dark:text-[#8A94A6]">
+                  <span>Lokasi Alokasi: <strong className="text-[#1B2436] dark:text-[#E8ECF3]">{detailSpk.warehouse}</strong></span>
+                  <span>Prioritas: <strong className="text-[#1B2436] dark:text-[#E8ECF3]">{detailSpk.priority}</strong></span>
+                </div>
+              </div>
+
+              {/* Kebutuhan Bahan (BOM Allocation) */}
+              <div className="p-3.5 rounded-xl bg-[#EFF4FE]/50 dark:bg-[#1B2A44]/40 border border-[#D6E3FC] dark:border-[#2B5FC7]/30">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="w-2 h-2 rounded-full bg-[#2B5FC7] dark:bg-[#3B6FE0]" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#2B5FC7] dark:text-[#93B4F5]">
+                    Alokasi Kebutuhan Bahan Baku (BOM Engine)
+                  </h4>
+                </div>
+                <p className="text-xs text-[#1B2436] dark:text-[#E8ECF3] leading-relaxed mb-3">
+                  {detailSpk.materialReqs || "Belum ada alokasi kebutuhan bahan baku."}
+                </p>
+
+                {detailSpk.materialReqs && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {detailSpk.materialReqs.split(", ").map((item, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-1 rounded-md text-[11px] font-medium bg-white dark:bg-[#16223A] border border-[#D6E3FC] dark:border-[#243049] text-[#1B2436] dark:text-[#E8ECF3] shadow-sm"
+                      >
+                        📦 {item}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Status Alur Pengerjaan */}
+              <div className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1B2436]/60 border border-[#E2E6ED] dark:border-[#243049]">
+                <p className="text-[11px] font-medium text-[#6B7684] dark:text-[#8A94A6] mb-2">
+                  Alur Operasional Terintegrasi
+                </p>
+                <div className="grid grid-cols-4 gap-1 text-center text-[10px]">
+                  <div className="p-1.5 rounded bg-[#ECFDF5] dark:bg-[#064E3B]/40 text-[#065F46] dark:text-[#34D399] font-semibold border border-[#A7F3D0] dark:border-[#065F46]">
+                    1. FO Validated
+                  </div>
+                  <div className="p-1.5 rounded bg-[#ECFDF5] dark:bg-[#064E3B]/40 text-[#065F46] dark:text-[#34D399] font-semibold border border-[#A7F3D0] dark:border-[#065F46]">
+                    2. Desain & BOM
+                  </div>
+                  <div className={`p-1.5 rounded font-semibold border ${
+                    detailSpk.status === "Proses" || detailSpk.status === "Selesai"
+                      ? "bg-[#EFF4FE] dark:bg-[#1D4ED8]/30 text-[#2B5FC7] dark:text-[#93B4F5] border-[#D6E3FC] dark:border-[#2B5FC7]"
+                      : "bg-[#F4F6FA] dark:bg-[#1B2A44] text-[#6B7684] dark:text-[#8A94A6] border-[#E2E6ED] dark:border-[#243049]"
+                  }`}>
+                    3. Produksi
+                  </div>
+                  <div className={`p-1.5 rounded font-semibold border ${
+                    detailSpk.status === "Selesai"
+                      ? "bg-[#ECFDF5] dark:bg-[#064E3B]/40 text-[#065F46] dark:text-[#34D399] border-[#A7F3D0] dark:border-[#065F46]"
+                      : "bg-[#F4F6FA] dark:bg-[#1B2A44] text-[#6B7684] dark:text-[#8A94A6] border-[#E2E6ED] dark:border-[#243049]"
+                  }`}>
+                    4. QC & Kirim
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DetailModal>
       </div>
     </DashboardLayout>
   );

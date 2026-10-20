@@ -6,9 +6,11 @@
 
 export type BrandName =
   | "Packsolution.id"
+  | "Estella Digital Printing"
   | "Estella"
   | "Pepipapier"
   | "memoirs.print"
+  | "pixpurry"
   | "pikpurry"
   | (string & {});
 
