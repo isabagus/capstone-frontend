@@ -21,10 +21,10 @@ import type {
 
 export const BRANDS: BrandName[] = [
   "Packsolution.id",
-  "Estella",
+  "Estella Digital Printing",
   "Pepipapier",
   "memoirs.print",
-  "pikpurry",
+  "pixpurry",
 ];
 
 export const BRAND_ITEMS: Brand[] = [
@@ -62,9 +62,9 @@ export const BRAND_ITEMS: Brand[] = [
   },
   {
     id: "b-pik",
-    name: "pikpurry",
-    code: "PIK",
-    slug: "pikpurry",
+    name: "pixpurry",
+    code: "PIX",
+    slug: "pixpurry",
     description: "Stiker vinyl custom, die-cut label waterproof, & packaging sleeve",
     active: true,
   },
@@ -136,12 +136,16 @@ export const CATEGORIES: Category[] = [
   { id: "cp-pouch", kind: "product", name: "Pouch & Flexible", description: "Standing pouch, ziplock", active: true },
   { id: "cp-semi", kind: "product", name: "Komponen Setengah Jadi", description: "Hasil cetak/potong yang belum dirakit", active: true },
   { id: "cp-sticker", kind: "product", name: "Sticker & Label", description: "Belum ada item", active: false },
-  // Bahan baku
-  { id: "cm-paper", kind: "material", name: "Kertas", description: "Ivory, art carton, art paper, duplex, kraft", active: true },
+  // Bahan baku (Terkoneksi Skema Database Master Kategori)
+  { id: "1", kind: "material", name: "Kertas Plano & Karton", description: "Ivory, art carton, art paper, duplex, kraft", active: true },
+  { id: "2", kind: "material", name: "Tinta & Kimia Cetak", description: "Tinta offset & UV (sensitif kedaluwarsa)", active: true },
+  { id: "3", kind: "material", name: "Finishing & Foil", description: "Foil, laminasi, varnish", active: true },
+  { id: "4", kind: "material", name: "Lem & Consumables", description: "Lem kuning, hot melt, double tape", active: true },
+  { id: "cm-paper", kind: "material", name: "Kertas Plano & Karton", description: "Ivory, art carton, art paper, duplex, kraft", active: true },
   { id: "cm-board", kind: "material", name: "Board / Karton Tebal", description: "Hardboard / greyboard untuk rigid box", active: true },
-  { id: "cm-ink", kind: "material", name: "Tinta", description: "Tinta offset & UV (sensitif kedaluwarsa)", active: true },
-  { id: "cm-finishing", kind: "material", name: "Finishing", description: "Foil, laminasi, varnish", active: true },
-  { id: "cm-adhesive", kind: "material", name: "Perekat", description: "Lem kuning, hot melt, double tape", active: true },
+  { id: "cm-ink", kind: "material", name: "Tinta & Kimia Cetak", description: "Tinta offset & UV (sensitif kedaluwarsa)", active: true },
+  { id: "cm-finishing", kind: "material", name: "Finishing & Foil", description: "Foil, laminasi, varnish", active: true },
+  { id: "cm-adhesive", kind: "material", name: "Lem & Consumables", description: "Lem kuning, hot melt, double tape", active: true },
   { id: "cm-flex", kind: "material", name: "Film Flexible", description: "Bahan pouch (PET/ALU/LLDPE)", active: true },
   { id: "cm-pack", kind: "material", name: "Material Packing", description: "Belum ada item", active: true },
   // Sparepart
@@ -170,26 +174,27 @@ export const SUPPLIERS: Supplier[] = [
 // Bahan Baku
 // ---------------------------------------------------------------------
 export const MATERIALS: Material[] = [
-  { id: "m-1", code: "BB-IVR-300", name: "Ivory 300gr", categoryId: "cm-paper", brands: ["Packsolution.id", "Estella"], unitId: "u-rim", stock: { g1: 28, g2: 12 }, safetyStock: 30, rop: 60, supplierId: "sp-1", gramature: 300, dimension: "79 x 109 cm", batchNo: "LOT-IV300-2609" },
-  { id: "m-2", code: "BB-IVR-250", name: "Ivory 250gr", categoryId: "cm-paper", brands: ["Estella", "Pepipapier"], unitId: "u-rim", stock: { g1: 55, g2: 20 }, safetyStock: 25, rop: 50, supplierId: "sp-1", gramature: 250, dimension: "79 x 109 cm", batchNo: "LOT-IV250-2608" },
-  { id: "m-3", code: "BB-ACT-260", name: "Art Carton 260gr", categoryId: "cm-paper", brands: ["Packsolution.id", "Pepipapier"], unitId: "u-rim", stock: { g1: 40, g2: 18 }, safetyStock: 20, rop: 45, supplierId: "sp-1", gramature: 260, dimension: "65 x 100 cm", batchNo: "LOT-AC260-2609" },
-  { id: "m-4", code: "BB-APR-150", name: "Art Paper 150gr", categoryId: "cm-paper", brands: ["memoirs.print"], unitId: "u-rim", stock: { g1: 90, g2: 30 }, safetyStock: 25, rop: 50, supplierId: "sp-1", gramature: 150, dimension: "65 x 100 cm", batchNo: "LOT-AP150-2607" },
-  { id: "m-5", code: "BB-DPX-350", name: "Duplex Coated 350gr", categoryId: "cm-paper", brands: ["pikpurry"], unitId: "u-rim", stock: { g1: 22, g2: 26 }, safetyStock: 20, rop: 40, supplierId: "sp-1", gramature: 350, dimension: "79 x 109 cm", batchNo: "LOT-DP350-2609" },
-  { id: "m-6", code: "BB-KRF-275", name: "Kraft Liner Brown 275gr", categoryId: "cm-paper", brands: ["Estella", "pikpurry"], unitId: "u-rim", stock: { g1: 10, g2: 6 }, safetyStock: 15, rop: 35, supplierId: "sp-1", gramature: 275, dimension: "90 x 120 cm", batchNo: "LOT-KF275-2608" },
-  { id: "m-7", code: "BB-HRD-2MM", name: "Hardboard 2mm", categoryId: "cm-board", brands: ["Packsolution.id"], unitId: "u-lbr", stock: { g1: 820, g2: 400 }, safetyStock: 300, rop: 600, supplierId: "sp-2", dimension: "80 x 110 cm", batchNo: "LOT-HB2-2609" },
-  { id: "m-8", code: "BB-HRD-3MM", name: "Hardboard 3mm", categoryId: "cm-board", brands: ["Packsolution.id", "memoirs.print"], unitId: "u-lbr", stock: { g1: 260, g2: 120 }, safetyStock: 200, rop: 400, supplierId: "sp-2", dimension: "80 x 110 cm", batchNo: "LOT-HB3-2609" },
-  { id: "m-9", code: "BB-INK-CYN", name: "Tinta UV Cyan", categoryId: "cm-ink", brands: [], unitId: "u-kg", stock: { g1: 6, g2: 0 }, safetyStock: 5, rop: 10, supplierId: "sp-3", batchNo: "LOT-UVC-2604", expiryDate: "2026-10-28" },
-  { id: "m-10", code: "BB-INK-MGT", name: "Tinta UV Magenta", categoryId: "cm-ink", brands: [], unitId: "u-kg", stock: { g1: 14, g2: 2 }, safetyStock: 5, rop: 10, supplierId: "sp-3", batchNo: "LOT-UVM-2606", expiryDate: "2027-01-15" },
-  { id: "m-11", code: "BB-INK-YLW", name: "Tinta UV Yellow", categoryId: "cm-ink", brands: [], unitId: "u-kg", stock: { g1: 11, g2: 0 }, safetyStock: 5, rop: 10, supplierId: "sp-3", batchNo: "LOT-UVY-2606", expiryDate: "2026-11-20" },
-  { id: "m-12", code: "BB-INK-BLK", name: "Tinta Offset Hitam Toyo", categoryId: "cm-ink", brands: [], unitId: "u-kg", stock: { g1: 4, g2: 3 }, safetyStock: 8, rop: 15, supplierId: "sp-3", batchNo: "LOT-OBK-2607", expiryDate: "2027-03-10" },
-  { id: "m-13", code: "BB-FOL-GLD", name: "Foil Hot Stamping Gold", categoryId: "cm-finishing", brands: ["Pepipapier", "Packsolution.id"], unitId: "u-roll", stock: { g1: 7, g2: 2 }, safetyStock: 3, rop: 6, supplierId: "sp-4", batchNo: "LOT-FG-2605" },
-  { id: "m-14", code: "BB-FOL-SLV", name: "Foil Hot Stamping Silver", categoryId: "cm-finishing", brands: ["Pepipapier"], unitId: "u-roll", stock: { g1: 3, g2: 1 }, safetyStock: 2, rop: 4, supplierId: "sp-4", batchNo: "LOT-FS-2605" },
-  { id: "m-15", code: "BB-LAM-DOF", name: "Laminasi Doff 32cm", categoryId: "cm-finishing", brands: ["Estella", "memoirs.print"], unitId: "u-roll", stock: { g1: 15, g2: 5 }, safetyStock: 4, rop: 8, supplierId: "sp-7", batchNo: "LOT-LD-2608" },
-  { id: "m-16", code: "BB-VRN-UV", name: "Varnish UV Gloss", categoryId: "cm-finishing", brands: [], unitId: "u-ltr", stock: { g1: 18, g2: 0 }, safetyStock: 10, rop: 20, supplierId: "sp-3", batchNo: "LOT-VUV-2603", expiryDate: "2026-10-18" },
-  { id: "m-17", code: "BB-LEM-KNG", name: "Lem Kuning Rigid Box", categoryId: "cm-adhesive", brands: ["Packsolution.id", "memoirs.print"], unitId: "u-kg", stock: { g1: 45, g2: 20 }, safetyStock: 15, rop: 30, supplierId: "sp-5", batchNo: "LOT-LK-2609", expiryDate: "2027-02-01" },
-  { id: "m-18", code: "BB-HTM-001", name: "Hot Melt Glue Stick", categoryId: "cm-adhesive", brands: [], unitId: "u-kg", stock: { g1: 9, g2: 4 }, safetyStock: 5, rop: 10, supplierId: "sp-5", batchNo: "LOT-HM-2608" },
-  { id: "m-19", code: "BB-FLX-ALU", name: "Film PET/ALU/LLDPE 100mic", categoryId: "cm-flex", brands: ["pikpurry"], unitId: "u-roll", stock: { g1: 2, g2: 3 }, safetyStock: 3, rop: 6, supplierId: "sp-7", dimension: "Lebar 60 cm", batchNo: "LOT-FLX-2609" },
+  { id: "m-1", code: "BB-IVR-300", name: "Ivory 300gr", categoryId: "1", brands: ["Packsolution.id", "Estella Digital Printing"], unitId: "u-rim", stock: { g1: 28, g2: 12 }, safetyStock: 30, rop: 60, supplierId: "sp-1", gramature: 300, dimension: "79 x 109 cm", batchNo: "LOT-IV300-2609" },
+  { id: "m-2", code: "BB-IVR-250", name: "Ivory 250gr", categoryId: "1", brands: ["Estella Digital Printing", "Pepipapier"], unitId: "u-rim", stock: { g1: 55, g2: 20 }, safetyStock: 25, rop: 50, supplierId: "sp-1", gramature: 250, dimension: "79 x 109 cm", batchNo: "LOT-IV250-2608" },
+  { id: "m-3", code: "BB-ACT-260", name: "Art Carton 260gr", categoryId: "1", brands: ["Packsolution.id", "Pepipapier"], unitId: "u-rim", stock: { g1: 40, g2: 18 }, safetyStock: 20, rop: 45, supplierId: "sp-1", gramature: 260, dimension: "65 x 100 cm", batchNo: "LOT-AC260-2609" },
+  { id: "m-4", code: "BB-APR-150", name: "Art Paper 150gr", categoryId: "1", brands: ["memoirs.print"], unitId: "u-rim", stock: { g1: 90, g2: 30 }, safetyStock: 25, rop: 50, supplierId: "sp-1", gramature: 150, dimension: "65 x 100 cm", batchNo: "LOT-AP150-2607" },
+  { id: "m-5", code: "BB-DPX-350", name: "Duplex Coated 350gr", categoryId: "1", brands: ["pixpurry"], unitId: "u-rim", stock: { g1: 22, g2: 26 }, safetyStock: 20, rop: 40, supplierId: "sp-1", gramature: 350, dimension: "79 x 109 cm", batchNo: "LOT-DP350-2609" },
+  { id: "m-6", code: "BB-KRF-275", name: "Kraft Liner Brown 275gr", categoryId: "1", brands: ["Estella Digital Printing", "pixpurry"], unitId: "u-rim", stock: { g1: 10, g2: 6 }, safetyStock: 15, rop: 35, supplierId: "sp-1", gramature: 275, dimension: "90 x 120 cm", batchNo: "LOT-KF275-2608" },
+  { id: "m-7", code: "BB-HRD-2MM", name: "Hardboard 2mm", categoryId: "1", brands: ["Packsolution.id"], unitId: "u-lbr", stock: { g1: 820, g2: 400 }, safetyStock: 300, rop: 600, supplierId: "sp-2", dimension: "80 x 110 cm", batchNo: "LOT-HB2-2609" },
+  { id: "m-8", code: "BB-HRD-3MM", name: "Hardboard 3mm", categoryId: "1", brands: ["Packsolution.id", "memoirs.print"], unitId: "u-lbr", stock: { g1: 260, g2: 120 }, safetyStock: 200, rop: 400, supplierId: "sp-2", dimension: "80 x 110 cm", batchNo: "LOT-HB3-2609" },
+  { id: "m-9", code: "BB-INK-CYN", name: "Tinta UV Cyan", categoryId: "2", brands: [], unitId: "u-kg", stock: { g1: 6, g2: 0 }, safetyStock: 5, rop: 10, supplierId: "sp-3", batchNo: "LOT-UVC-2604", expiryDate: "2026-10-28" },
+  { id: "m-10", code: "BB-INK-MGT", name: "Tinta UV Magenta", categoryId: "2", brands: [], unitId: "u-kg", stock: { g1: 14, g2: 2 }, safetyStock: 5, rop: 10, supplierId: "sp-3", batchNo: "LOT-UVM-2606", expiryDate: "2027-01-15" },
+  { id: "m-11", code: "BB-INK-YLW", name: "Tinta UV Yellow", categoryId: "2", brands: [], unitId: "u-kg", stock: { g1: 11, g2: 0 }, safetyStock: 5, rop: 10, supplierId: "sp-3", batchNo: "LOT-UVY-2606", expiryDate: "2026-11-20" },
+  { id: "m-12", code: "BB-INK-BLK", name: "Tinta Offset Hitam Toyo", categoryId: "2", brands: [], unitId: "u-kg", stock: { g1: 4, g2: 3 }, safetyStock: 8, rop: 15, supplierId: "sp-3", batchNo: "LOT-OBK-2607", expiryDate: "2027-03-10" },
+  { id: "m-13", code: "BB-FOL-GLD", name: "Foil Hot Stamping Gold", categoryId: "3", brands: ["Pepipapier", "Packsolution.id"], unitId: "u-roll", stock: { g1: 7, g2: 2 }, safetyStock: 3, rop: 6, supplierId: "sp-4", batchNo: "LOT-FG-2605" },
+  { id: "m-14", code: "BB-FOL-SLV", name: "Foil Hot Stamping Silver", categoryId: "3", brands: ["Pepipapier"], unitId: "u-roll", stock: { g1: 3, g2: 1 }, safetyStock: 2, rop: 4, supplierId: "sp-4", batchNo: "LOT-FS-2605" },
+  { id: "m-15", code: "BB-LAM-DOF", name: "Laminasi Doff 32cm", categoryId: "3", brands: ["Estella Digital Printing", "memoirs.print"], unitId: "u-roll", stock: { g1: 15, g2: 5 }, safetyStock: 4, rop: 8, supplierId: "sp-7", batchNo: "LOT-LD-2608" },
+  { id: "m-16", code: "BB-VRN-UV", name: "Varnish UV Gloss", categoryId: "3", brands: [], unitId: "u-ltr", stock: { g1: 18, g2: 0 }, safetyStock: 10, rop: 20, supplierId: "sp-3", batchNo: "LOT-VUV-2603", expiryDate: "2026-10-18" },
+  { id: "m-17", code: "BB-LEM-KNG", name: "Lem Kuning Rigid Box", categoryId: "4", brands: ["Packsolution.id", "memoirs.print"], unitId: "u-kg", stock: { g1: 45, g2: 20 }, safetyStock: 15, rop: 30, supplierId: "sp-5", batchNo: "LOT-LK-2609", expiryDate: "2027-02-01" },
+  { id: "m-18", code: "BB-HTM-001", name: "Hot Melt Glue Stick", categoryId: "4", brands: [], unitId: "u-kg", stock: { g1: 9, g2: 4 }, safetyStock: 5, rop: 10, supplierId: "sp-5", batchNo: "LOT-HM-2608" },
+  { id: "m-19", code: "BB-FLX-ALU", name: "Film PET/ALU/LLDPE 100mic", categoryId: "1", brands: ["pixpurry"], unitId: "u-roll", stock: { g1: 2, g2: 3 }, safetyStock: 3, rop: 6, supplierId: "sp-7", dimension: "Lebar 60 cm", batchNo: "LOT-FLX-2609" },
 ];
+
 
 // ---------------------------------------------------------------------
 // Sparepart & Consumable

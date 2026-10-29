@@ -20,6 +20,7 @@ import {
   IconLayers,
   IconPlus,
   IconPower,
+  IconTrash,
   IconWarehouse,
 } from "@/components/icons/Icons";
 
@@ -31,6 +32,8 @@ export default function WarehousesPage() {
   const [editWarehouse, setEditWarehouse] = useState<WarehouseWithStats | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [toggleWarehouse, setToggleWarehouse] = useState<WarehouseWithStats | null>(null);
+  const [deleteWarehouse, setDeleteWarehouse] = useState<WarehouseWithStats | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Form State
   const [code, setCode] = useState("");
@@ -117,6 +120,21 @@ export default function WarehousesPage() {
       reload();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Gagal mengubah status gudang.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleDeleteWarehouse = async () => {
+    if (!deleteWarehouse) return;
+    setPending(true);
+    setDeleteError(null);
+    try {
+      await warehouseService.delete(deleteWarehouse.id);
+      setDeleteWarehouse(null);
+      reload();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Gagal menghapus gudang.");
     } finally {
       setPending(false);
     }
@@ -264,6 +282,21 @@ export default function WarehousesPage() {
               <IconPower size={15} />
             </button>
           </Can>
+          {w.active === false && (
+            <Can permission="master.warehouses.delete">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteError(null);
+                  setDeleteWarehouse(w);
+                }}
+                className="p-1.5 rounded text-[#64748B] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                title="Hapus Permanen Gudang"
+              >
+                <IconTrash size={15} />
+              </button>
+            </Can>
+          )}
         </div>
       ),
     },
@@ -625,6 +658,27 @@ export default function WarehousesPage() {
           confirmLabel={toggleWarehouse?.active !== false ? "Ya, Nonaktifkan" : "Ya, Aktifkan"}
           tone={toggleWarehouse?.active !== false ? "danger" : "primary"}
           pending={pending}
+        />
+
+        {/* Confirm Dialog Hapus Permanen */}
+        <ConfirmDialog
+          open={!!deleteWarehouse}
+          onClose={() => {
+            setDeleteWarehouse(null);
+            setDeleteError(null);
+          }}
+          onConfirm={handleDeleteWarehouse}
+          title="Hapus Permanen Gudang"
+          message={
+            <span>
+              Apakah Anda yakin ingin <strong>menghapus permanen</strong> gudang{" "}
+              <strong>{deleteWarehouse?.name}</strong>? Seluruh data gudang akan dihapus dan tidak dapat dikembalikan.
+            </span>
+          }
+          tone="danger"
+          confirmLabel="Ya, Hapus Permanen"
+          pending={pending}
+          error={deleteError}
         />
       </div>
     </DashboardLayout>

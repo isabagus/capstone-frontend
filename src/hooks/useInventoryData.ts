@@ -130,22 +130,62 @@ export function useCategories(kind: CategoryKind) {
 // ---- Master Referensi Dinamis (Terhubung ke Master Data Live) ----
 export function useBrands(): string[] {
   const { data } = useBrandList();
-  return useMemo(() => {
-    if (data && data.length > 0) {
-      return data.filter((b) => b.active !== false).map((b) => b.name);
+  const [brands, setBrands] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("master_brands_cache");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
     }
     return BRANDS;
+  });
+
+  useEffect(() => {
+    if (data && data.length > 0) {
+      const liveBrands = data.filter((b) => b.active !== false).map((b) => b.name);
+      if (liveBrands.length > 0) {
+        setBrands(liveBrands);
+        try {
+          localStorage.setItem("master_brands_cache", JSON.stringify(liveBrands));
+        } catch {}
+      }
+    }
   }, [data]);
+
+  return brands;
 }
 
 export function useWarehouses(): Warehouse[] {
   const { data } = useWarehouseList();
-  return useMemo(() => {
-    if (data && data.length > 0) {
-      return data.filter((w) => w.active !== false);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("master_warehouses_cache");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
     }
     return WAREHOUSES;
+  });
+
+  useEffect(() => {
+    if (data && data.length > 0) {
+      const liveWarehouses = data.filter((w) => w.active !== false);
+      if (liveWarehouses.length > 0) {
+        setWarehouses(liveWarehouses);
+        try {
+          localStorage.setItem("master_warehouses_cache", JSON.stringify(liveWarehouses));
+        } catch {}
+      }
+    }
   }, [data]);
+
+  return warehouses;
 }
 
 /**

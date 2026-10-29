@@ -12,13 +12,15 @@ import { btn, inputBase } from "@/components/ui/styles";
 import { useCategories } from "@/hooks/useInventoryData";
 import { categoryService, type CategoryWithCount } from "@/services/categoryService";
 import type { CategoryKind } from "@/types/inventory";
-import { IconEdit, IconFolder, IconPlus, IconTrash } from "@/components/icons/Icons";
+import { IconEdit, IconEye, IconFolder, IconPlus, IconTrash } from "@/components/icons/Icons";
+import DetailModal from "@/components/ui/DetailModal";
 
 interface CategoryManagementProps {
   kind: CategoryKind;
   title: string;
   subtitle: string;
   permissionPrefix: string;
+  tabsSlot?: React.ReactNode;
 }
 
 export default function CategoryManagement({
@@ -26,10 +28,12 @@ export default function CategoryManagement({
   title,
   subtitle,
   permissionPrefix,
+  tabsSlot,
 }: CategoryManagementProps) {
   const { data: categories, loading, error, reload } = useCategories(kind);
 
   // Modals
+  const [detailCategory, setDetailCategory] = useState<CategoryWithCount | null>(null);
   const [editCategory, setEditCategory] = useState<CategoryWithCount | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deleteCategory, setDeleteCategory] = useState<CategoryWithCount | null>(null);
@@ -161,6 +165,14 @@ export default function CategoryManagement({
       align: "right",
       render: (cat) => (
         <div className="flex items-center justify-end gap-1">
+          <button
+            type="button"
+            onClick={() => setDetailCategory(cat)}
+            className="p-1.5 rounded-lg text-[#6B7684] hover:text-[#2B5FC7] hover:bg-[#EFF4FE] dark:hover:bg-[#1B2A44] transition-colors"
+            title="Lihat Detail Kategori"
+          >
+            <IconEye size={16} />
+          </button>
           <Can permission={`${permissionPrefix}.edit`}>
             <button
               type="button"
@@ -206,6 +218,13 @@ export default function CategoryManagement({
           }
         />
 
+        {/* Tab Switcher jika ada */}
+        {tabsSlot && (
+          <div className="pt-0 pb-1">
+            {tabsSlot}
+          </div>
+        )}
+
         {/* Data Table */}
         <DataTable
           columns={columns}
@@ -214,6 +233,7 @@ export default function CategoryManagement({
           loading={loading}
           error={error}
           onRetry={reload}
+          onRowClick={(c) => setDetailCategory(c)}
           searchPlaceholder="Cari nama kategori, deskripsi..."
           searchFilter={(c, q) =>
             c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q)
@@ -306,6 +326,91 @@ export default function CategoryManagement({
           pending={pending}
           error={deleteError}
         />
+
+        {/* Modal Detail Kategori (Pop Up) */}
+        <DetailModal
+          open={!!detailCategory}
+          onClose={() => setDetailCategory(null)}
+          title={detailCategory?.name || "Detail Kategori"}
+          subtitle={`Jenis: ${
+            detailCategory?.kind === "product"
+              ? "Produk Jadi"
+              : detailCategory?.kind === "material"
+              ? "Bahan Baku"
+              : "Sparepart"
+          }`}
+          badge={
+            detailCategory ? (
+              <StatusBadge tone={detailCategory.active ? "green" : "gray"} dot>
+                {detailCategory.active ? "Aktif" : "Nonaktif"}
+              </StatusBadge>
+            ) : undefined
+          }
+          icon={<IconFolder size={20} />}
+          actions={
+            <Can permission={`${permissionPrefix}.edit`}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (detailCategory) {
+                    const target = detailCategory;
+                    setDetailCategory(null);
+                    openEdit(target);
+                  }
+                }}
+                className={btn.primary}
+              >
+                <IconEdit size={14} />
+                <span>Edit Kategori</span>
+              </button>
+            </Can>
+          }
+        >
+          {detailCategory && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1B2436]/60 border border-[#E2E6ED] dark:border-[#243049]">
+                  <p className="text-[11px] font-medium text-[#6B7684] dark:text-[#8A94A6]">
+                    Jenis Kategori
+                  </p>
+                  <p className="text-sm font-semibold text-[#1B2436] dark:text-[#E8ECF3] mt-0.5">
+                    {detailCategory.kind === "product"
+                      ? "Produk Jadi"
+                      : detailCategory.kind === "material"
+                      ? "Bahan Baku"
+                      : "Sparepart"}
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1B2436]/60 border border-[#E2E6ED] dark:border-[#243049]">
+                  <p className="text-[11px] font-medium text-[#6B7684] dark:text-[#8A94A6]">
+                    Jumlah Item Terkait
+                  </p>
+                  <p className="text-sm font-semibold text-[#2B5FC7] dark:text-[#93B4F5] mt-0.5">
+                    {detailCategory.itemCount} item
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1B2436]/60 border border-[#E2E6ED] dark:border-[#243049]">
+                <p className="text-[11px] font-medium text-[#6B7684] dark:text-[#8A94A6] mb-1">
+                  Deskripsi Cakupan
+                </p>
+                <p className="text-xs text-[#1B2436] dark:text-[#E8ECF3] leading-relaxed">
+                  {detailCategory.description || "Tidak ada deskripsi"}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1B2436]/60 border border-[#E2E6ED] dark:border-[#243049]">
+                <p className="text-[11px] font-medium text-[#6B7684] dark:text-[#8A94A6] mb-1">
+                  ID Referensi Kategori
+                </p>
+                <p className="text-xs font-mono text-[#6B7684] dark:text-[#8A94A6]">
+                  {detailCategory.id}
+                </p>
+              </div>
+            </div>
+          )}
+        </DetailModal>
       </div>
     </DashboardLayout>
   );

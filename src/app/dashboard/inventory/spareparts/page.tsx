@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import StatusBadge from "@/components/ui/StatusBadge";
-import Drawer from "@/components/ui/Drawer";
 import FormModal from "@/components/ui/FormModal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import StockMutationModal, { type MutationType } from "@/components/inventory/StockMutationModal";
@@ -13,7 +13,6 @@ import Can from "@/components/auth/Can";
 import { btn, cx, inputBase } from "@/components/ui/styles";
 import {
   useCategories,
-  useMovements,
   useSpareparts,
   useSuppliers,
   useUnits,
@@ -22,9 +21,12 @@ import {
 import { sparepartService } from "@/services/inventoryService";
 import type { Sparepart } from "@/types/inventory";
 import {
+  findCategoryName,
+  findUnitAbbr,
   formatDateTime,
   formatNumber,
   getStockStatus,
+  getWarehouseStock,
   STOCK_STATUS_LABEL,
   totalStock,
 } from "@/lib/inventoryUtils";
@@ -41,6 +43,7 @@ import {
 } from "@/components/icons/Icons";
 
 export default function SparepartsPage() {
+  const router = useRouter();
   const { data: spareparts, loading, error, reload } = useSpareparts();
   const { data: categories } = useCategories("sparepart");
   const { data: suppliers } = useSuppliers();
@@ -53,7 +56,6 @@ export default function SparepartsPage() {
   const [selectedStockStatus, setSelectedStockStatus] = useState<string>("all");
 
   // Modals & Drawers
-  const [detailItem, setDetailItem] = useState<Sparepart | null>(null);
   const [editItem, setEditItem] = useState<Sparepart | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deleteItem, setDeleteItem] = useState<Sparepart | null>(null);
@@ -80,9 +82,6 @@ export default function SparepartsPage() {
   const [expiryDate, setExpiryDate] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-
-  // Detail movements
-  const { data: movements } = useMovements("sparepart", detailItem?.id, 10);
 
   // Filtered dataset
   const filteredSpareparts = useMemo(() => {
@@ -235,7 +234,7 @@ export default function SparepartsPage() {
     {
       key: "category",
       header: "Kategori",
-      render: (s) => categories?.find((c) => c.id === s.categoryId)?.name ?? "-",
+      render: (s) => findCategoryName(categories, s.categoryId),
     },
     {
       key: "machine",
@@ -252,23 +251,23 @@ export default function SparepartsPage() {
     {
       key: "unit",
       header: "Satuan",
-      render: (s) => units?.find((u) => u.id === s.unitId)?.abbr ?? "-",
+      render: (s) => findUnitAbbr(units, s.unitId),
     },
     {
       key: "stock_g1",
       header: "G1",
       align: "right",
       sortable: true,
-      sortValue: (s) => s.stock.g1,
-      render: (s) => formatNumber(s.stock.g1),
+      sortValue: (s) => getWarehouseStock(s.stock, "g1"),
+      render: (s) => formatNumber(getWarehouseStock(s.stock, "g1")),
     },
     {
       key: "stock_g2",
       header: "G2",
       align: "right",
       sortable: true,
-      sortValue: (s) => s.stock.g2,
-      render: (s) => formatNumber(s.stock.g2),
+      sortValue: (s) => getWarehouseStock(s.stock, "g2"),
+      render: (s) => formatNumber(getWarehouseStock(s.stock, "g2")),
     },
     {
       key: "total_stock",
@@ -310,7 +309,7 @@ export default function SparepartsPage() {
         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
-            onClick={() => setDetailItem(s)}
+            onClick={() => router.push(`/dashboard/inventory/spareparts/${s.id}`)}
             className="p-1.5 rounded-lg text-[#6B7684] hover:text-[#2B5FC7] hover:bg-[#EFF4FE] dark:hover:bg-[#1B2A44] transition-colors"
             title="Detail & Riwayat Mutasi"
           >
@@ -349,66 +348,52 @@ export default function SparepartsPage() {
           title="Sparepart & Consumable Mesin"
           subtitle="Pemeliharaan suku cadang mesin offset, pisau potong, oli, blanket, dan perlengkapan produksi"
           actions={
-            <div className="flex flex-wrap items-center gap-2">
-              <Can permission="inventory.spareparts.in">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setMutationModal({
-                      open: true,
-                      type: "IN",
-                      item: spareparts?.[0] || null,
-                    })
-                  }
-                  className={btn.outline}
-                >
-                  <IconArrowIn size={14} />
-                  <span>Barang Masuk</span>
-                </button>
-              </Can>
-              <Can permission="inventory.spareparts.create">
-                <button type="button" onClick={openAdd} className={btn.primary}>
-                  <IconPlus size={14} strokeWidth={2.5} />
-                  <span>Tambah Sparepart</span>
-                </button>
-              </Can>
-            </div>
+            <Can permission="inventory.spareparts.create">
+              <button type="button" onClick={openAdd} className={btn.primary}>
+                <IconPlus size={14} strokeWidth={2.5} />
+                <span>Tambah Sparepart</span>
+              </button>
+            </Can>
           }
         />
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
+        {/* Filters Toolbar Card */}
+        <div className="p-4 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-sm flex flex-wrap items-center gap-3">
+          <div className="w-56">
             <select
               value={selectedCat}
               onChange={(e) => setSelectedCat(e.target.value)}
-              className={cx(inputBase, "w-48 text-xs h-9")}
+              className={cx(inputBase, "w-full text-xs h-9")}
             >
-              <option value="all">Semua Kategori</option>
+              <option value="all">Semua Kategori Sparepart</option>
               {categories?.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
             </select>
+          </div>
 
+          <div className="w-48">
             <select
               value={selectedWarehouse}
               onChange={(e) => setSelectedWarehouse(e.target.value)}
-              className={cx(inputBase, "w-40 text-xs h-9")}
+              className={cx(inputBase, "w-full text-xs h-9")}
             >
               <option value="all">Semua Gudang</option>
               {warehouses.map((w) => (
                 <option key={w.id} value={w.id}>
-                  Ada di {w.name}
+                  {w.name}
                 </option>
               ))}
             </select>
+          </div>
 
+          <div className="w-44">
             <select
               value={selectedStockStatus}
               onChange={(e) => setSelectedStockStatus(e.target.value)}
-              className={cx(inputBase, "w-40 text-xs h-9")}
+              className={cx(inputBase, "w-full text-xs h-9")}
             >
               <option value="all">Semua Status ROP</option>
               <option value="below">Di Bawah ROP</option>
@@ -416,6 +401,20 @@ export default function SparepartsPage() {
               <option value="safe">Aman</option>
             </select>
           </div>
+
+          {(selectedCat !== "all" || selectedWarehouse !== "all" || selectedStockStatus !== "all") && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedCat("all");
+                setSelectedWarehouse("all");
+                setSelectedStockStatus("all");
+              }}
+              className="text-xs text-[#2B5FC7] dark:text-[#3B6FE0] font-medium hover:underline px-2"
+            >
+              Reset Filter
+            </button>
+          )}
         </div>
 
         {/* Data Table */}
@@ -433,182 +432,11 @@ export default function SparepartsPage() {
             Boolean(s.machine && s.machine.toLowerCase().includes(q))
           }
           defaultSort={{ key: "code", direction: "asc" }}
-          onRowClick={(s) => setDetailItem(s)}
+          onRowClick={(s) => router.push(`/dashboard/inventory/spareparts/${s.id}`)}
           emptyTitle="Belum Ada Sparepart"
           emptySubtitle="Belum ada data sparepart yang sesuai dengan filter atau kata kunci."
         />
 
-        {/* Drawer Detail */}
-        <Drawer
-          open={!!detailItem}
-          onClose={() => setDetailItem(null)}
-          title={detailItem?.name || "Detail Sparepart"}
-          subtitle={`Kode: ${detailItem?.code} ${detailItem?.machine ? `· Mesin: ${detailItem.machine}` : ""}`}
-          width="md"
-          footer={
-            detailItem && (
-              <div className="flex flex-wrap gap-2 w-full justify-between items-center">
-                <div className="flex gap-2">
-                  <Can permission="inventory.spareparts.in">
-                    <button
-                      type="button"
-                      onClick={() => setMutationModal({ open: true, type: "IN", item: detailItem })}
-                      className={btn.outline}
-                    >
-                      <IconArrowIn size={14} />
-                      <span>Masuk</span>
-                    </button>
-                  </Can>
-                  <Can permission="inventory.spareparts.out">
-                    <button
-                      type="button"
-                      onClick={() => setMutationModal({ open: true, type: "OUT", item: detailItem })}
-                      className={btn.outline}
-                    >
-                      <IconArrowOut size={14} />
-                      <span>Keluar</span>
-                    </button>
-                  </Can>
-                </div>
-                <div className="flex gap-2">
-                  <Can permission="inventory.spareparts.transfer">
-                    <button
-                      type="button"
-                      onClick={() => setMutationModal({ open: true, type: "TRANSFER", item: detailItem })}
-                      className={btn.primary}
-                    >
-                      <IconRefresh size={14} />
-                      <span>Transfer</span>
-                    </button>
-                  </Can>
-                  <Can permission="inventory.spareparts.opname">
-                    <button
-                      type="button"
-                      onClick={() => setMutationModal({ open: true, type: "OPNAME", item: detailItem })}
-                      className={btn.ghost}
-                    >
-                      <IconClipboardCheck size={14} />
-                      <span>Opname</span>
-                    </button>
-                  </Can>
-                </div>
-              </div>
-            )
-          }
-        >
-          {detailItem && (
-            <div className="space-y-6">
-              {/* Stok Gudang */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#6B7684] dark:text-[#8A94A6] mb-3">
-                  Rincian Stok Multi-Gudang
-                </h4>
-                <div className="grid grid-cols-2 gap-3">
-                  {warehouses.map((w) => (
-                    <div
-                      key={w.id}
-                      className="p-3 rounded-xl border border-[#E2E6ED] dark:border-[#26334D] bg-[#F4F6FA] dark:bg-[#1B2A44]"
-                    >
-                      <div className="text-[11px] text-[#6B7684] dark:text-[#8A94A6]">{w.name}</div>
-                      <div className="text-xl font-bold text-[#1B2436] dark:text-[#E8ECF3] mt-1">
-                        {formatNumber(detailItem.stock[w.id])}{" "}
-                        <span className="text-xs font-normal text-[#6B7684]">
-                          {units?.find((u) => u.id === detailItem.unitId)?.abbr}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3 p-3 rounded-lg border border-[#D6E3FC] dark:border-[#26334D] bg-[#EFF4FE] dark:bg-[#1D4ED8]/15 flex justify-between items-center text-xs">
-                  <span className="text-[#2B5FC7] dark:text-[#93B4F5] font-medium">Total Stok Seluruh Gudang:</span>
-                  <span className="font-bold text-sm text-[#2B5FC7] dark:text-[#93B4F5]">
-                    {formatNumber(totalStock(detailItem.stock))}{" "}
-                    {units?.find((u) => u.id === detailItem.unitId)?.abbr}
-                  </span>
-                </div>
-              </div>
-
-              {/* Detail Atribut */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#6B7684] dark:text-[#8A94A6] mb-2">
-                  Spesifikasi Teknis
-                </h4>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                  <div>
-                    <dt className="text-[#6B7684] dark:text-[#8A94A6]">Peruntukan Mesin</dt>
-                    <dd className="font-medium mt-0.5">{detailItem.machine || "Umum / Bersama"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[#6B7684] dark:text-[#8A94A6]">Kategori</dt>
-                    <dd className="font-medium mt-0.5">
-                      {categories?.find((c) => c.id === detailItem.categoryId)?.name ?? "-"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[#6B7684] dark:text-[#8A94A6]">Reorder Point (ROP)</dt>
-                    <dd className="font-medium mt-0.5">{detailItem.rop} {units?.find((u) => u.id === detailItem.unitId)?.abbr}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[#6B7684] dark:text-[#8A94A6]">Safety Stock</dt>
-                    <dd className="font-medium mt-0.5">{detailItem.safetyStock} {units?.find((u) => u.id === detailItem.unitId)?.abbr}</dd>
-                  </div>
-                  {detailItem.supplierId && (
-                    <div className="col-span-2">
-                      <dt className="text-[#6B7684] dark:text-[#8A94A6]">Supplier</dt>
-                      <dd className="font-medium mt-0.5">
-                        {suppliers?.find((s) => s.id === detailItem.supplierId)?.name ?? "-"}
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-              </div>
-
-              {/* Riwayat Mutasi */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#6B7684] dark:text-[#8A94A6] mb-2">
-                  Riwayat Mutasi Terakhir
-                </h4>
-                {movements && movements.length > 0 ? (
-                  <div className="space-y-2">
-                    {movements.map((m) => (
-                      <div
-                        key={m.id}
-                        className="p-2.5 rounded-lg border border-[#E2E6ED] dark:border-[#26334D] text-xs flex justify-between items-center"
-                      >
-                        <div>
-                          <div className="flex items-center gap-1.5 font-medium">
-                            <span
-                              className={`px-1.5 py-0.2 rounded text-[10px] ${
-                                m.type === "IN"
-                                  ? "bg-[#ECFDF5] text-[#065F46] dark:bg-[#064E3B]/30 dark:text-[#34D399]"
-                                  : m.type === "OUT"
-                                  ? "bg-[#FEF2F2] text-[#991B1B] dark:bg-[#7F1D1D]/30 dark:text-[#F87171]"
-                                  : "bg-[#EFF4FE] text-[#2B5FC7] dark:bg-[#1D4ED8]/25 dark:text-[#93C5FD]"
-                              }`}
-                            >
-                              {m.type}
-                            </span>
-                            <span>{m.qty > 0 ? `+${m.qty}` : m.qty} unit</span>
-                          </div>
-                          <div className="text-[11px] text-[#6B7684] dark:text-[#8A94A6] mt-0.5">
-                            {m.note || m.reference || "Tanpa catatan"} · {m.user}
-                          </div>
-                        </div>
-                        <div className="text-[10px] text-[#6B7684] dark:text-[#8A94A6] text-right">
-                          {formatDateTime(m.date)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-[#6B7684] dark:text-[#8A94A6] italic py-2">
-                    Belum ada riwayat mutasi untuk sparepart ini.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-        </Drawer>
 
         {/* Modal Tambah / Edit Sparepart */}
         <FormModal
