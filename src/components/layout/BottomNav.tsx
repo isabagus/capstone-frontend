@@ -7,10 +7,9 @@ import { IconDashboard, renderNavIcon } from "@/components/icons/Icons";
 
 interface BottomNavProps {
   onOpenMenu: () => void;
-  onOpenRopModal?: () => void;
 }
 
-export default function BottomNav({ onOpenMenu, onOpenRopModal }: BottomNavProps) {
+export default function BottomNav({ onOpenMenu }: BottomNavProps) {
   const { user } = useAuth();
   const pathname = usePathname();
 
@@ -88,23 +87,7 @@ export default function BottomNav({ onOpenMenu, onOpenRopModal }: BottomNavProps
           <span className="text-[9px] text-[#2B5FC7] dark:text-[#3B6FE0] font-medium mt-0.5">Menu</span>
         </div>
 
-        {/* 4. Tab: ROP Alerts */}
-        <button
-          onClick={onOpenRopModal || onOpenMenu}
-          id="mobile-nav-alerts"
-          aria-label="Alert ROP"
-          className="flex flex-col items-center justify-center py-1 px-3 rounded-lg text-[#6B7684] hover:text-[#1B2436] dark:text-[#8A94A6] dark:hover:text-[#E8ECF3] transition-colors active:scale-95 relative"
-        >
-          <div className="relative">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#991B1B] dark:bg-[#F87171]" />
-          </div>
-          <span className="text-[10px] mt-0.5">Alert</span>
-        </button>
-
-        {/* 5. Tab: Akun / Profil */}
+        {/* 4. Tab: Akun / Profil */}
         <button
           onClick={onOpenMenu}
           id="mobile-nav-profile"

@@ -637,6 +637,14 @@ export function renderNavIcon(id: string, className?: string, size = 16) {
       return <IconPackage size={size} className={className} />;
     case "orders":
       return <IconOrders size={size} className={className} />;
+    case "fo-customers":
+      return <IconUsers size={size} className={className} />;
+    case "fo-materials":
+      return <IconLayers size={size} className={className} />;
+    case "fo-notifications":
+      return <IconAlertTriangle size={size} className={className} />;
+    case "fo-order-activity":
+      return <IconAudit size={size} className={className} />;
     case "bom":
       return <IconBom size={size} className={className} />;
     case "spk":

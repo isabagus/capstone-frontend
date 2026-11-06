@@ -13,7 +13,7 @@ import {
   IconInfo,
 } from "@/components/icons/Icons";
 
-interface AuditLogEntry {
+interface AuditLogEntry { // Untuk menampilkan semua module  //
   id: string;
   timestamp: string;
   userName: string;
@@ -34,7 +34,7 @@ export default function AuditTrailPage() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
 
-  const logs: AuditLogEntry[] = [
+  const logs: AuditLogEntry[] = [ // menentukan informasi log seperti pengguna role, modul, dan aksi  //
     {
       id: "AUD-99120",
       timestamp: "2026-09-24 14:32:10",
@@ -253,7 +253,7 @@ export default function AuditTrailPage() {
                 </td>
                 <td className="py-3 px-4 text-right">
                   <button
-                    onClick={() => setSelectedLog(log)}
+                    onClick={() => setSelectedLog(log)} // Pitfalls masih kosong //
                     className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-[#E2E6ED] dark:border-[#26334D] text-[#6B7684] hover:text-[#2B5FC7] hover:border-[#2B5FC7] dark:text-[#8A94A6] dark:hover:text-[#3B6FE0] transition-colors"
                   >
                     <IconEye size={12} />

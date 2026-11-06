@@ -35,7 +35,7 @@ interface OrderForBom {
   insheetQuantity: number; // lembar cadangan cetak
   status: "Belum Dihitung" | "BOM Selesai" | "SPK Terbit";
 }
-
+// data pesanan untuk perhitungan BOM
 const SAMPLE_ORDERS_QUEUE: OrderForBom[] = [
   {
     id: "1",
@@ -95,7 +95,7 @@ export default function BomCalculatorPage() {
   const [ordersQueue, setOrdersQueue] = useState<OrderForBom[]>(SAMPLE_ORDERS_QUEUE);
   const [selectedOrder, setSelectedOrder] = useState<OrderForBom>(SAMPLE_ORDERS_QUEUE[0]);
 
-  // Interactive Calculator State
+  // Interactive Calculator State Menyimpan pesanan terpilih
   const [planoLength, setPlanoLength] = useState<number>(selectedOrder.planoLengthCm);
   const [planoWidth, setPlanoWidth] = useState<number>(selectedOrder.planoWidthCm);
   const [cutLength, setCutLength] = useState<number>(selectedOrder.cutLengthCm);
@@ -206,6 +206,7 @@ export default function BomCalculatorPage() {
             </p>
           </div>
 
+          // Tombol Bom pitfalss //
           <div className="flex items-center gap-2">
             <button
               onClick={() => {

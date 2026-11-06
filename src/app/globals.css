@@ -138,3 +138,47 @@ button, a, input, select {
 @media (prefers-reduced-motion: reduce) {
   .ps-fade-in, .ps-slide-up, .ps-slide-left, .ps-pop, .ps-skeleton { animation: none; }
 }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  #invoice-print-overlay,
+  #invoice-print-overlay * {
+    visibility: visible !important;
+  }
+
+  #invoice-print-overlay {
+    position: static !important;
+    display: block !important;
+    padding: 0 !important;
+    background: #fff !important;
+    backdrop-filter: none !important;
+  }
+
+  #invoice-print-modal {
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  #invoice-print-header {
+    display: none !important;
+  }
+
+  #invoice-print-sheet {
+    overflow: visible !important;
+    padding: 0 !important;
+    color: #1e293b !important;
+  }
+}

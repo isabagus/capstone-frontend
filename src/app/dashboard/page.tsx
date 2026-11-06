@@ -6,6 +6,10 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavItems, NavItem } from "@/config/navigation";
 import { useBrands } from "@/hooks/useInventoryData";
+import { useMaterials } from "@/hooks/useInventoryData";
+import { useOrders } from "@/lib/frontOfficeData";
+import { useCustomers } from "@/lib/customerData";
+import { getStockStatus, totalStock } from "@/lib/inventoryUtils";
 import {
   IconTag,
   IconWarehouse,
@@ -204,11 +208,40 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const navItems = useNavItems();
   const [selectedBrandFilter, setSelectedBrandFilter] = useState<string>("Semua");
+  const [frontOfficeOrders] = useOrders();
+  const [frontOfficeCustomers] = useCustomers();
+  const { data: frontOfficeMaterials } = useMaterials();
 
   const normalizedRole = (user?.role || "").toLowerCase().trim().replace(/[\s-]+/g, "_");
   const isGudang = normalizedRole === "staf_gudang";
+  const isFrontOffice = normalizedRole === "front_office";
 
-  const widgets = ROLE_WIDGETS[normalizedRole] ?? ROLE_WIDGETS.owner;
+  const baseWidgets = ROLE_WIDGETS[normalizedRole] ?? ROLE_WIDGETS.owner;
+  const activeFrontOfficeOrders = frontOfficeOrders.length;
+  const priorityOrders = frontOfficeOrders.filter(
+    (order) => order.priority === "Express" || order.priority === "High",
+  ).length;
+  const revisionFollowUps = frontOfficeOrders.filter(
+    (order) => order.revisionCount >= 4,
+  ).length;
+  const stockFollowUps = (frontOfficeMaterials ?? []).filter((material) => {
+    const stockStatus = getStockStatus(totalStock(material.stock), material.rop);
+    return stockStatus === "below" || stockStatus === "near";
+  }).length;
+  const widgets = isFrontOffice
+    ? baseWidgets.map((widget, index) => {
+        if (index === 0) {
+          return { ...widget, value: `${activeFrontOfficeOrders} Order`, desc: "Order aktif dari daftar pelanggan" };
+        }
+        if (index === 1) {
+          return { ...widget, value: `${stockFollowUps} Bahan`, desc: "Menipis atau di bawah batas minimum" };
+        }
+        if (index === 2) {
+          return { ...widget, value: `${priorityOrders} Order`, desc: "Prioritas High dan Express" };
+        }
+        return { ...widget, value: `${revisionFollowUps} Order`, desc: "Mencapai batas 4 kali revisi" };
+      })
+    : baseWidgets;
 
   const dynamicBrands = useBrands();
   const brands = ["Semua", ...dynamicBrands];
@@ -311,6 +344,14 @@ export default function DashboardPage() {
                   <span>Catat Barang Masuk</span>
                 </Link>
               </>
+            ) : isFrontOffice ? (
+              <Link
+                href="/dashboard/orders"
+                className="px-3.5 py-2 min-h-[40px] rounded-lg text-xs font-medium bg-[#2B5FC7] hover:bg-[#1D4FB8] dark:bg-[#3B6FE0] dark:hover:bg-[#2B5FC7] text-white shadow-sm transition-colors flex items-center gap-1.5"
+              >
+                <IconPlus size={13} strokeWidth={2.5} />
+                <span>Buat Pesanan Baru</span>
+              </Link>
             ) : (
               <>
                 <button
@@ -404,6 +445,54 @@ export default function DashboardPage() {
             })}
           </div>
         </section>
+
+        {!isGudang && (
+          <section className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="rounded-xl border border-[#E2E6ED] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:border-[#26334D] dark:bg-[#16223A]">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7684] dark:text-[#8A94A6]">Data Pelanggan</p>
+                  <p className="mt-2 text-3xl font-bold text-[#1B2436] dark:text-[#E8ECF3]">{frontOfficeCustomers.length}</p>
+                </div>
+                <div className="rounded-lg bg-[#EFF4FE] p-2 text-[#2B5FC7] dark:bg-[#1D4ED8]/20 dark:text-[#93B4F5]">
+                  <IconOrders size={18} />
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between text-[11px] text-[#6B7684] dark:text-[#8A94A6]">
+                <span>Aktif</span>
+                <span className="font-semibold text-[#1B2436] dark:text-[#E8ECF3]">
+                  {frontOfficeCustomers.filter((customer) => customer.status === "Aktif").length}
+                </span>
+              </div>
+
+              <Link href="/dashboard/customer" className="mt-4 inline-block text-xs font-semibold text-[#2B5FC7] dark:text-[#93B4F5]">
+                Lihat data pelanggan →
+              </Link>
+            </div>
+
+            <div className="rounded-xl border border-[#E2E6ED] bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:border-[#26334D] dark:bg-[#16223A]">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7684] dark:text-[#8A94A6]">Stok Bahan Baku</p>
+                  <p className="mt-2 text-3xl font-bold text-[#1B2436] dark:text-[#E8ECF3]">{frontOfficeMaterials?.length ?? 0}</p>
+                </div>
+                <div className="rounded-lg bg-[#FFF7ED] p-2 text-[#C2410C] dark:bg-[#7C2D12]/20 dark:text-[#FDBA74]">
+                  <IconWarehouse size={18} />
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between text-[11px] text-[#6B7684] dark:text-[#8A94A6]">
+                <span>Bahan perlu perhatian</span>
+                <span className="font-semibold text-amber-600 dark:text-amber-400">{stockFollowUps}</span>
+              </div>
+
+              <Link href="/dashboard/inventory/materials" className="mt-4 inline-block text-xs font-semibold text-[#2B5FC7] dark:text-[#93B4F5]">
+                Cek stok bahan baku →
+              </Link>
+            </div>
+          </section>
+        )}
 
         {/* Staf Gudang: Panel Peringatan Stok & Antrean Produksi */}
         {isGudang && (
@@ -512,7 +601,7 @@ export default function DashboardPage() {
         )}
 
         {/* Data Table Section (Antrean Pesanan Umum jika bukan Staf Gudang) */}
-        {!isGudang && (
+        {!isGudang && !isFrontOffice && (
         <section className="rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none overflow-hidden transition-colors">
           {/* Table Header & Brand Filter Bar */}
           <div className="p-4 sm:p-5 border-b border-[#E2E6ED] dark:border-[#26334D] flex flex-col md:flex-row md:items-center justify-between gap-4">

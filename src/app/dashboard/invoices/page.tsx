@@ -5,14 +5,11 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import {
   IconInvoice,
   IconSearch,
-  IconFilter,
   IconEye,
   IconDownload,
   IconPrinter,
-  IconCheckCircle,
   IconXCircle,
   IconDollar,
-  IconPlus,
 } from "@/components/icons/Icons";
 
 interface InvoiceItem {
@@ -27,6 +24,25 @@ interface InvoiceItem {
   paidAmount: number;
   status: "LUNAS" | "DP_DITERIMA" | "BELUM_BAYAR" | "JATUH_TEMPO";
   itemsSummary: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+  description: string;
+}
+
+function formatCurrency(amount: number): string {
+  return `Rp ${amount.toLocaleString("id-ID", {
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function formatInvoiceDate(value: string): string {
+  return new Date(`${value}T00:00:00`).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 export default function InvoicesPage() {
@@ -51,6 +67,10 @@ export default function InvoicesPage() {
       paidAmount: 7000000,
       status: "DP_DITERIMA",
       itemsSummary: "5.000 Pcs Hardbox Premium Ivory 300gsm (Foil Emas)",
+      quantity: 5000,
+      unitPrice: 2650,
+      subtotal: 13250000,
+      description: "Cetak Offset 4/0 Full Color, Laminasi Doff, Pond Die-cut, Perakitan Presisi",
     },
     {
       id: "INV-2026-0088",
@@ -64,6 +84,10 @@ export default function InvoicesPage() {
       paidAmount: 6882000,
       status: "LUNAS",
       itemsSummary: "3.000 Pcs Box Obat Herbal Duplex 350gsm + Doff",
+      quantity: 3000,
+      unitPrice: 6200000 / 3000,
+      subtotal: 6200000,
+      description: "Cetak kemasan obat herbal, finishing laminasi doff",
     },
     {
       id: "INV-2026-0087",
@@ -77,6 +101,10 @@ export default function InvoicesPage() {
       paidAmount: 0,
       status: "JATUH_TEMPO",
       itemsSummary: "10.000 Pcs Sleeve Tube Lipcream Hot Stamping",
+      quantity: 10000,
+      unitPrice: 2560,
+      subtotal: 25600000,
+      description: "Cetak full color dengan finishing hot stamping",
     },
     {
       id: "INV-2026-0086",
@@ -90,6 +118,10 @@ export default function InvoicesPage() {
       paidAmount: 0,
       status: "BELUM_BAYAR",
       itemsSummary: "2.000 Pcs Paper Bag Craft Coklat 150gsm",
+      quantity: 2000,
+      unitPrice: 2250,
+      subtotal: 4500000,
+      description: "Cetak paper bag bahan kraft 150 gsm",
     },
   ];
 
@@ -283,140 +315,136 @@ export default function InvoicesPage() {
 
       {/* MODAL PREVIEW INVOICE */}
       {selectedInvoice && !showPaymentModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+        <div id="invoice-print-overlay" className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div id="invoice-print-modal" className="bg-white rounded-xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
             {/* Modal Header */}
-            <div className="p-4 border-b border-[#E2E6ED] dark:border-[#26334D] flex items-center justify-between">
+            <div id="invoice-print-header" className="p-4 border-b border-slate-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <IconInvoice size={18} className="text-[#2B5FC7] dark:text-[#3B6FE0]" />
-                <span className="font-bold text-sm text-[#1B2436] dark:text-[#E8ECF3]">
+                <IconInvoice size={18} className="text-[#2B5FC7]" />
+                <span className="font-bold text-sm text-slate-900">
                   Pratinjau Faktur Penjualan: {selectedInvoice.invoiceNumber}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => window.print()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-[#E2E6ED] dark:border-[#26334D] hover:bg-[#F4F6FA] dark:hover:bg-[#1B2A44] transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
                 >
                   <IconPrinter size={14} />
                   <span>Cetak</span>
                 </button>
                 <button
                   onClick={() => setSelectedInvoice(null)}
-                  className="p-1 rounded-lg text-[#6B7684] hover:text-[#1B2436] dark:hover:text-[#E8ECF3]"
+                  className="p-1 rounded-lg text-slate-500 hover:text-slate-900"
                 >
                   <IconXCircle size={18} />
                 </button>
               </div>
             </div>
 
-            {/* Document Sheet Simulation */}
-            <div className="p-8 overflow-y-auto space-y-6 text-[#1B2436] dark:text-[#E8ECF3] text-xs">
-              {/* Kop Perusahaan */}
-              <div className="flex justify-between items-start border-b border-[#E2E6ED] dark:border-[#26334D] pb-6">
-                <div>
-                  <div className="text-lg font-bold text-[#2B5FC7] dark:text-[#3B6FE0]">
-                    CV SOLUSI INOVASI PACKAGING
+            <div id="invoice-print-sheet" className="overflow-y-auto bg-white p-8 text-xs text-slate-800">
+              <div className="flex items-start justify-between gap-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-slate-900 text-white" aria-hidden="true">
+                    <svg viewBox="0 0 48 48" className="h-12 w-12" fill="none">
+                      <path d="M24 3 44 14v20L24 45 4 34V14L24 3Z" stroke="currentColor" strokeWidth="3" />
+                      <path d="m4 14 20 12 20-12M24 26v19M14 9l20 12v9l-7-4v-5l-13-8V9Z" stroke="currentColor" strokeWidth="3" />
+                    </svg>
                   </div>
-                  <div className="text-[11px] text-[#6B7684] dark:text-[#8A94A6] mt-1 leading-relaxed">
-                    Kawasan Industri Percetakan & Kemasan No. 18, Surabaya<br />
-                    NPWP: 01.345.678.9-604.000 | Email: billing@packsolution.id
+                  <div className="font-black leading-tight tracking-wide text-slate-900">
+                    <div className="text-lg">PACKSOLUTION.ID</div>
+                    <div className="mt-1 text-[10px] font-medium tracking-normal text-slate-500">CV Solusi Inovasi Packaging</div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-xl font-bold text-[#1B2436] dark:text-[#E8ECF3]">INVOICE</div>
-                  <div className="text-xs font-mono font-semibold text-[#2B5FC7] dark:text-[#3B6FE0] mt-0.5">
-                    {selectedInvoice.invoiceNumber}
-                  </div>
-                  <div className="mt-2">{getStatusBadge(selectedInvoice.status)}</div>
-                </div>
-              </div>
-
-              {/* Tagihan Kepada & Tanggal */}
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <div className="text-[11px] font-semibold text-[#6B7684] dark:text-[#8A94A6] uppercase">Ditujukan Kepada:</div>
-                  <div className="font-bold text-sm mt-1">{selectedInvoice.customerCompany}</div>
-                  <div className="text-[#6B7684] dark:text-[#8A94A6]">U.p. {selectedInvoice.customerName}</div>
-                  <div className="text-[11px] text-[#6B7684] dark:text-[#8A94A6] mt-1">Ref No. Order: {selectedInvoice.orderNumber}</div>
-                </div>
-                <div className="space-y-1 text-right">
-                  <div>
-                    <span className="text-[#6B7684] dark:text-[#8A94A6]">Tanggal Terbit: </span>
-                    <span className="font-semibold">{selectedInvoice.issueDate}</span>
-                  </div>
-                  <div>
-                    <span className="text-[#6B7684] dark:text-[#8A94A6]">Jatuh Tempo: </span>
-                    <span className="font-bold text-[#991B1B] dark:text-[#F87171]">{selectedInvoice.dueDate}</span>
-                  </div>
-                  <div>
-                    <span className="text-[#6B7684] dark:text-[#8A94A6]">Termin Pembayaran: </span>
-                    <span className="font-semibold">Net 14 Days</span>
-                  </div>
+                <div className="min-w-[220px] text-right">
+                  <h2 className="text-2xl font-bold text-[#3672AA]">Invoice</h2>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+                    <dt className="text-slate-500">Referensi</dt>
+                    <dd className="font-medium">{selectedInvoice.invoiceNumber}</dd>
+                    <dt className="text-slate-500">Tanggal</dt>
+                    <dd>{formatInvoiceDate(selectedInvoice.issueDate)}</dd>
+                    <dt className="text-slate-500">Tgl. Jatuh Tempo</dt>
+                    <dd>{formatInvoiceDate(selectedInvoice.dueDate)}</dd>
+                  </dl>
                 </div>
               </div>
 
-              {/* Rincian Item */}
-              <table className="w-full text-left border-collapse border border-[#E2E6ED] dark:border-[#26334D]">
-                <thead>
-                  <tr className="bg-[#F4F6FA] dark:bg-[#1B2A44] border-b border-[#E2E6ED] dark:border-[#26334D] text-[11px] text-[#6B7684] dark:text-[#8A94A6]">
-                    <th className="p-3">Deskripsi Barang / Jasa Percetakan</th>
-                    <th className="p-3 text-right">Qty</th>
-                    <th className="p-3 text-right">Harga Satuan</th>
-                    <th className="p-3 text-right">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E2E6ED] dark:divide-[#26334D]">
-                  <tr>
-                    <td className="p-3">
-                      <div className="font-semibold">{selectedInvoice.itemsSummary}</div>
-                      <div className="text-[11px] text-[#6B7684] dark:text-[#8A94A6]">
-                        Cetak Offset 4/0 Full Color, Laminasi Doff, Pond Die-cut, Perakitan Presisi
-                      </div>
-                    </td>
-                    <td className="p-3 text-right font-mono">5.000 Pcs</td>
-                    <td className="p-3 text-right font-mono">Rp 2.650</td>
-                    <td className="p-3 text-right font-mono font-semibold">Rp 13.250.000</td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="mt-8 grid grid-cols-2 gap-10">
+                <section>
+                  <h3 className="border-b-2 border-slate-700 pb-2 font-bold">Info Perusahaan</h3>
+                  <p className="mt-3 font-semibold text-[#3672AA]">Packsolution.id</p>
+                  <p className="mt-3 leading-relaxed text-slate-600">
+                    Kawasan Industri Percetakan & Kemasan No. 18<br />
+                    Surabaya, Indonesia<br />
+                    NPWP: 01.345.678.9-604.000<br />
+                    Email: billing@packsolution.id
+                  </p>
+                </section>
+                <section>
+                  <h3 className="border-b-2 border-slate-700 pb-2 font-bold">Tagihan Untuk</h3>
+                  <p className="mt-3 font-semibold text-[#3672AA]">{selectedInvoice.customerCompany}</p>
+                  <p className="mt-2 text-slate-600">U.p. {selectedInvoice.customerName}</p>
+                  <p className="mt-2 text-slate-600">Referensi Order: {selectedInvoice.orderNumber}</p>
+                </section>
+              </div>
 
-              {/* Total Calculation */}
-              <div className="flex justify-end">
-                <div className="w-72 space-y-2 text-xs">
+              <div className="mt-8 overflow-x-auto">
+                <table className="w-full min-w-[640px] border-collapse text-left text-[11px]">
+                  <thead>
+                    <tr className="bg-slate-700 text-white">
+                      <th className="p-3">Produk</th>
+                      <th className="p-3">Deskripsi</th>
+                      <th className="p-3 text-right">Qty</th>
+                      <th className="p-3 text-right">Harga</th>
+                      <th className="p-3 text-right">Disc</th>
+                      <th className="p-3 text-right">Jumlah</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-slate-200 bg-slate-50">
+                      <td className="p-3 font-semibold">{selectedInvoice.itemsSummary.replace(/^[\d.,]+\s*Pcs\s+/i, "")}</td>
+                      <td className="p-3 text-slate-600">{selectedInvoice.description}</td>
+                      <td className="p-3 text-right tabular-nums">{selectedInvoice.quantity.toLocaleString("id-ID")}</td>
+                      <td className="p-3 text-right tabular-nums">{formatCurrency(selectedInvoice.unitPrice)}</td>
+                      <td className="p-3 text-right tabular-nums">{formatCurrency(0)}</td>
+                      <td className="p-3 text-right font-semibold tabular-nums">{formatCurrency(selectedInvoice.subtotal)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <dl className="w-full max-w-sm space-y-2 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-[#6B7684] dark:text-[#8A94A6]">Subtotal:</span>
-                    <span className="font-mono font-medium">Rp 13.250.000</span>
+                    <dt className="text-slate-500">Subtotal</dt>
+                    <dd className="font-medium tabular-nums">{formatCurrency(selectedInvoice.subtotal)}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#6B7684] dark:text-[#8A94A6]">PPN 11%:</span>
-                    <span className="font-mono font-medium">Rp 1.457.500</span>
+                    <dt className="text-slate-500">PPN 11%</dt>
+                    <dd className="font-medium tabular-nums">{formatCurrency(selectedInvoice.amount - selectedInvoice.subtotal)}</dd>
                   </div>
-                  <div className="border-t border-[#E2E6ED] dark:border-[#26334D] pt-2 flex justify-between font-bold text-sm text-[#2B5FC7] dark:text-[#3B6FE0]">
-                    <span>Total Tagihan:</span>
-                    <span className="font-mono">Rp {selectedInvoice.amount.toLocaleString("id-ID")}</span>
+                  <div className="flex justify-between border-t border-slate-300 pt-2 text-sm font-bold text-[#3672AA]">
+                    <dt>Total Tagihan</dt>
+                    <dd className="tabular-nums">{formatCurrency(selectedInvoice.amount)}</dd>
                   </div>
-                  <div className="flex justify-between text-xs text-[#065F46] dark:text-[#34D399]">
-                    <span>Uang Muka / DP Diterima:</span>
-                    <span className="font-mono">- Rp {selectedInvoice.paidAmount.toLocaleString("id-ID")}</span>
+                  <div className="flex justify-between text-emerald-700">
+                    <dt>Uang Muka / Pembayaran</dt>
+                    <dd className="tabular-nums">− {formatCurrency(selectedInvoice.paidAmount)}</dd>
                   </div>
-                  <div className="border-t border-dashed border-[#E2E6ED] dark:border-[#26334D] pt-2 flex justify-between font-bold text-sm text-[#991B1B] dark:text-[#F87171]">
-                    <span>Sisa Pelunasan:</span>
-                    <span className="font-mono">
-                      Rp {(selectedInvoice.amount - selectedInvoice.paidAmount).toLocaleString("id-ID")}
-                    </span>
+                  <div className="flex justify-between border-t border-dashed border-slate-300 pt-2 text-sm font-bold text-red-600">
+                    <dt>Sisa Pelunasan</dt>
+                    <dd className="tabular-nums">{formatCurrency(selectedInvoice.amount - selectedInvoice.paidAmount)}</dd>
                   </div>
-                </div>
+                </dl>
               </div>
 
-              {/* Rekening Pembayaran */}
-              <div className="p-4 rounded-xl bg-[#F4F6FA] dark:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] text-xs">
-                <div className="font-bold text-[#1B2436] dark:text-[#E8ECF3] mb-1">Instruksi Pembayaran Transfer:</div>
-                <div className="text-[#6B7684] dark:text-[#8A94A6] leading-relaxed">
-                  Bank BCA Rekening: <strong className="text-[#1B2436] dark:text-[#E8ECF3]">8290-192-888</strong> a.n CV Solusi Inovasi Packaging<br />
-                  Bank Mandiri Rekening: <strong className="text-[#1B2436] dark:text-[#E8ECF3]">141-00-9821-4321</strong> a.n CV Solusi Inovasi Packaging<br />
-                  Harap menyertakan nomor referensi invoice saat melakukan konfirmasi pembayaran.
-                </div>
+              <div className="mt-8 border-t border-slate-200 pt-4 text-[11px] text-slate-600">
+                <h3 className="font-bold text-slate-800">Instruksi Pembayaran</h3>
+                <p className="mt-2 leading-relaxed">
+                  Bank BCA: <strong>8290-192-888</strong> a.n. CV Solusi Inovasi Packaging<br />
+                  Bank Mandiri: <strong>141-00-9821-4321</strong> a.n. CV Solusi Inovasi Packaging<br />
+                  Cantumkan nomor invoice pada berita transfer.
+                </p>
               </div>
             </div>
           </div>

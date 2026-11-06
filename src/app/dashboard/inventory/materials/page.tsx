@@ -12,6 +12,7 @@ import FormModal from "@/components/ui/FormModal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import StockMutationModal, { type MutationType } from "@/components/inventory/StockMutationModal";
 import Can from "@/components/auth/Can";
+import { useAuth } from "@/contexts/AuthContext";
 import { btn, cx, inputBase } from "@/components/ui/styles";
 import {
   useBrands,
@@ -49,6 +50,8 @@ import {
 
 function MaterialsContent() {
   const searchParams = useSearchParams();
+  const { user, hasRole } = useAuth();
+  const canManageMaterials = Boolean(user) && !hasRole("front_office");
   const { data: materials, loading, error, reload } = useMaterials();
   const { data: categories } = useCategories("material");
   const { data: suppliers } = useSuppliers();
@@ -112,7 +115,7 @@ function MaterialsContent() {
         if (match) {
           queueMicrotask(() => setDetailItem(match));
         }
-      } else if (actionParam) {
+      } else if (actionParam && canManageMaterials) {
         if (actionParam === "stock_in") {
           queueMicrotask(() =>
             setMutationModal({ open: true, type: "IN", item: materials[0] })
@@ -124,7 +127,7 @@ function MaterialsContent() {
         }
       }
     }
-  }, [searchParams, materials]);
+  }, [searchParams, materials, canManageMaterials]);
 
   // Filtered dataset
   const filteredMaterials = useMemo(() => {
@@ -415,7 +418,7 @@ function MaterialsContent() {
           >
             <IconEye size={16} />
           </button>
-          <Can permission="inventory.materials.edit">
+          {canManageMaterials && <Can permission="inventory.materials.edit">
             <button
               type="button"
               onClick={() => openEdit(m)}
@@ -424,8 +427,8 @@ function MaterialsContent() {
             >
               <IconEdit size={16} />
             </button>
-          </Can>
-          <Can permission="inventory.materials.delete">
+          </Can>}
+          {canManageMaterials && <Can permission="inventory.materials.delete">
             <button
               type="button"
               onClick={() => setDeleteItem(m)}
@@ -434,7 +437,7 @@ function MaterialsContent() {
             >
               <IconTrash size={16} />
             </button>
-          </Can>
+          </Can>}
         </div>
       ),
     },
@@ -449,7 +452,7 @@ function MaterialsContent() {
           subtitle="Pemantauan stok kertas, board, tinta, lem, dan bahan sensitif dengan peringatan ROP & kedaluwarsa"
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              <Can permission="inventory.materials.transfer">
+              {canManageMaterials && <Can permission="inventory.materials.transfer">
                 <button
                   type="button"
                   onClick={() =>
@@ -464,8 +467,8 @@ function MaterialsContent() {
                   <IconRefresh size={14} />
                   <span>Transfer Stok</span>
                 </button>
-              </Can>
-              <Can permission="inventory.materials.in">
+              </Can>}
+              {canManageMaterials && <Can permission="inventory.materials.in">
                 <button
                   type="button"
                   onClick={() =>
@@ -480,13 +483,13 @@ function MaterialsContent() {
                   <IconArrowIn size={14} />
                   <span>Barang Masuk</span>
                 </button>
-              </Can>
-              <Can permission="inventory.materials.create">
+              </Can>}
+              {canManageMaterials && <Can permission="inventory.materials.create">
                 <button type="button" onClick={openAdd} className={btn.primary}>
                   <IconPlus size={14} strokeWidth={2.5} />
                   <span>Tambah Bahan</span>
                 </button>
-              </Can>
+              </Can>}
             </div>
           }
         />
@@ -611,7 +614,7 @@ function MaterialsContent() {
           subtitle={`Kode: ${detailItem?.code} · Satuan: ${units?.find((u) => u.id === detailItem?.unitId)?.name}`}
           width="lg"
           footer={
-            detailItem && (
+            detailItem && canManageMaterials && (
               <div className="flex flex-wrap gap-2 w-full justify-between items-center">
                 <div className="flex gap-2">
                   <Can permission="inventory.materials.in">
@@ -824,7 +827,7 @@ function MaterialsContent() {
 
         {/* Modal Tambah / Edit Bahan */}
         <FormModal
-          open={isAddOpen || !!editItem}
+          open={canManageMaterials && (isAddOpen || !!editItem)}
           onClose={() => {
             setIsAddOpen(false);
             setEditItem(null);
@@ -1052,7 +1055,7 @@ function MaterialsContent() {
 
         {/* Modal Mutasi Stok (IN, OUT, TRANSFER, OPNAME) */}
         <StockMutationModal
-          open={mutationModal.open}
+          open={canManageMaterials && mutationModal.open}
           onClose={() => setMutationModal((m) => ({ ...m, open: false }))}
           type={mutationModal.type}
           item={mutationModal.item}
@@ -1062,7 +1065,7 @@ function MaterialsContent() {
 
         {/* Dialog Hapus */}
         <ConfirmDialog
-          open={!!deleteItem}
+          open={canManageMaterials && !!deleteItem}
           onClose={() => setDeleteItem(null)}
           onConfirm={handleDelete}
           title="Hapus Bahan Baku"
