@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { useBrands } from "@/hooks/useInventoryData";
+import { useBrands, useProducts } from "@/hooks/useInventoryData";
+import { useCustomerMaster } from "@/services/partnerMasterStore";
 import {
   IconOrders,
   IconTag,
@@ -19,6 +21,7 @@ import {
   IconWarehouse,
   IconShield,
   IconPalette,
+  IconUsers,
 } from "@/components/icons/Icons";
 
 interface OrderItem {
@@ -26,7 +29,9 @@ interface OrderItem {
   orderNumber: string;
   customerName: string;
   customerPhone: string;
-  brand: "Packsolution.id" | "Estella" | "Pepipapier" | "memoirs.print" | "pikpurry";
+  customerMode?: "Repeat" | "Baru";
+  orderServiceType?: "Jasa Cetak Custom" | "Beli Produk Jadi";
+  brand: string;
   productName: string;
   dimensions: string;
   paperType: string;
@@ -36,7 +41,7 @@ interface OrderItem {
   priority: "Normal" | "High" | "Express";
   deadline: string;
   orderDate: string;
-  status: "Order Placed" | "Queued for Design" | "Design Approved" | "In-Production";
+  status: "Order Placed" | "Queued for Design" | "Design Approved" | "In-Production" | "Siap Kirim (Ready Stock)";
   revisionCount: number; // Max 4
   revisionHistory: { revNumber: number; date: string; notes: string }[];
   notes?: string;
@@ -177,11 +182,21 @@ export default function OrdersPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Multi-step form state for new order
+  const { customers, updateCustomers } = useCustomerMaster();
+  const { data: readyProducts } = useProducts();
+
   const [formStep, setFormStep] = useState<number>(1);
+  const [customerMode, setCustomerMode] = useState<"Repeat" | "Baru">("Repeat");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
+  const [orderServiceType, setOrderServiceType] = useState<"Jasa Cetak Custom" | "Beli Produk Jadi">("Jasa Cetak Custom");
+  const [selectedReadyProductSku, setSelectedReadyProductSku] = useState<string>("");
+  const [newCustomerPic, setNewCustomerPic] = useState<string>("");
+  const [newCustomerAddress, setNewCustomerAddress] = useState<string>("");
+
   const [newOrderData, setNewOrderData] = useState({
     customerName: "",
     customerPhone: "",
-    brand: "Packsolution.id" as OrderItem["brand"],
+    brand: "Packsolution.id",
     productName: "",
     dimensions: "",
     paperType: "Kertas Ivory 300 GSM Plano (79 x 109 cm)",
@@ -194,7 +209,7 @@ export default function OrdersPage() {
 
   const dynamicBrands = useBrands();
   const brands = ["Semua", ...dynamicBrands];
-  const statuses = ["Semua", "Order Placed", "Queued for Design", "Design Approved", "In-Production"];
+  const statuses = ["Semua", "Order Placed", "Queued for Design", "Design Approved", "In-Production", "Siap Kirim (Ready Stock)"];
   const priorities = ["Semua", "Normal", "High", "Express"];
 
   const triggerToast = (msg: string) => {
@@ -275,6 +290,12 @@ export default function OrdersPage() {
         return (
           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-[#F4F6FA] text-[#2B5FC7] border border-[#2B5FC7] dark:bg-[#1B2A44] dark:text-[#3B6FE0] dark:border-[#3B6FE0]">
             In-Production
+          </span>
+        );
+      case "Siap Kirim (Ready Stock)":
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#ECFDF5] text-[#059669] border border-[#A7F3D0] dark:bg-[#064E3B]/30 dark:text-[#34D399]">
+            Siap Kirim (Produk Jadi)
           </span>
         );
     }
@@ -401,29 +422,8 @@ export default function OrdersPage() {
 
         {/* Filter Bar & Search */}
         <section className="p-4 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none space-y-3.5 transition-colors">
-          {/* Brand Filter Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-            <span className="text-xs font-semibold text-[#6B7684] dark:text-[#8A94A6] mr-1 flex items-center gap-1">
-              <IconTag size={13} />
-              <span>Brand:</span>
-            </span>
-            {brands.map((b) => (
-              <button
-                key={b}
-                onClick={() => setSelectedBrand(b)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors flex-shrink-0 ${
-                  selectedBrand === b
-                    ? "bg-[#2B5FC7] text-white dark:bg-[#3B6FE0]"
-                    : "bg-[#F4F6FA] text-[#6B7684] hover:text-[#1B2436] border border-[#E2E6ED] dark:bg-[#1B2A44] dark:text-[#8A94A6] dark:hover:text-[#E8ECF3] dark:border-[#26334D]"
-                }`}
-              >
-                {b}
-              </button>
-            ))}
-          </div>
-
-          {/* Row 2: Search, Status, Priority */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-3 border-t border-[#E2E6ED] dark:border-[#26334D]">
+          {/* Search, Brand Select, Status, Priority */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-1 max-w-md">
               <div className="relative w-full">
                 <IconSearch
@@ -450,6 +450,25 @@ export default function OrdersPage() {
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
+              {/* Brand Filter Option Select */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-medium text-[#6B7684] dark:text-[#8A94A6] flex items-center gap-1">
+                  <IconTag size={12} />
+                  <span>Brand:</span>
+                </span>
+                <select
+                  value={selectedBrand}
+                  onChange={(e) => setSelectedBrand(e.target.value)}
+                  className="h-9 px-2.5 rounded-lg bg-[#F4F6FA] dark:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3] text-xs font-medium focus:outline-none focus:border-[#2B5FC7]"
+                >
+                  {brands.map((b) => (
+                    <option key={b} value={b}>
+                      {b === "Semua" ? "Semua Brand" : b}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Status Filter */}
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-[#6B7684] dark:text-[#8A94A6]">Status:</span>
@@ -545,8 +564,21 @@ export default function OrdersPage() {
 
                       {/* Pelanggan */}
                       <td className="py-3 px-4 max-w-[180px]">
-                        <div className="font-semibold text-[#1B2436] dark:text-[#E8ECF3] truncate">
-                          {o.customerName}
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-[#1B2436] dark:text-[#E8ECF3] truncate">
+                            {o.customerName}
+                          </span>
+                          {o.customerMode && (
+                            <span
+                              className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                                o.customerMode === "Repeat"
+                                  ? "bg-[#ECFDF5] text-[#059669] border border-[#A7F3D0]"
+                                  : "bg-[#EFF4FE] text-[#2B5FC7] border border-[#D6E3FC]"
+                              }`}
+                            >
+                              {o.customerMode}
+                            </span>
+                          )}
                         </div>
                         <div className="text-[11px] text-[#6B7684] dark:text-[#8A94A6] font-mono">
                           {o.customerPhone}
@@ -562,7 +594,18 @@ export default function OrdersPage() {
 
                       {/* Produk */}
                       <td className="py-3 px-4 max-w-xs">
-                        <div className="font-medium truncate">{o.productName}</div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium truncate">{o.productName}</span>
+                          <span
+                            className={`px-1.5 py-0.2 rounded text-[9px] font-semibold shrink-0 ${
+                              o.orderServiceType === "Beli Produk Jadi"
+                                ? "bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A]"
+                                : "bg-[#EFF4FE] text-[#2B5FC7] border border-[#D6E3FC]"
+                            }`}
+                          >
+                            {o.orderServiceType === "Beli Produk Jadi" ? "Produk Jadi" : "Jasa Cetak"}
+                          </span>
+                        </div>
                         <div className="text-[11px] text-[#6B7684] dark:text-[#8A94A6] truncate">
                           {o.dimensions} · {o.paperType}
                         </div>
@@ -706,127 +749,363 @@ export default function OrdersPage() {
                 ))}
               </div>
 
-              {/* Step 1: Customer & Brand */}
+              {/* Step 1: Customer (Repeat vs Baru) & Brand */}
               {formStep === 1 && (
-                <div className="space-y-3 text-xs">
+                <div className="space-y-3.5 text-xs">
+                  {/* Toggle Pelanggan Repeat vs Pelanggan Baru */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="font-semibold text-[#1B2436] dark:text-[#E8ECF3]">
+                        Kategori Pelanggan (Repeat Order vs Pelanggan Baru)
+                      </label>
+                      <Link
+                        href="/dashboard/master/customers"
+                        className="text-[11px] font-medium text-[#2B5FC7] hover:underline"
+                      >
+                        Buka Master Pelanggan →
+                      </Link>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCustomerMode("Repeat")}
+                        className={`p-2.5 rounded-lg border text-left transition-all ${
+                          customerMode === "Repeat"
+                            ? "bg-[#EFF4FE] border-[#2B5FC7] text-[#2B5FC7] dark:bg-[#1D4ED8]/25 dark:border-[#3B6FE0] dark:text-[#93C5FD]"
+                            : "bg-[#F4F6FA] dark:bg-[#0F1B2D] border-[#E2E6ED] dark:border-[#26334D] text-[#6B7684]"
+                        }`}
+                      >
+                        <div className="font-bold text-xs">🔄 Pelanggan Repeat (Terdaftar)</div>
+                        <div className="text-[10px] opacity-85 mt-0.5">
+                          Pilih dari Master Pelanggan tanpa ketik ulang nama & otomatis muat spek sebelumnya
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomerMode("Baru");
+                          setSelectedCustomerId("");
+                          setNewOrderData({
+                            ...newOrderData,
+                            customerName: "",
+                            customerPhone: "",
+                          });
+                        }}
+                        className={`p-2.5 rounded-lg border text-left transition-all ${
+                          customerMode === "Baru"
+                            ? "bg-[#ECFDF5] border-[#059669] text-[#065F46] dark:bg-[#064E3B]/30 dark:border-[#34D399] dark:text-[#34D399]"
+                            : "bg-[#F4F6FA] dark:bg-[#0F1B2D] border-[#E2E6ED] dark:border-[#26334D] text-[#6B7684]"
+                        }`}
+                      >
+                        <div className="font-bold text-xs">➕ Pelanggan Baru</div>
+                        <div className="text-[10px] opacity-85 mt-0.5">
+                          Ketik profil klien baru & otomatis tersimpan ke Master Pelanggan
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {customerMode === "Repeat" ? (
+                    <div className="p-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] space-y-2.5">
+                      <div>
+                        <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
+                          Pilih Pelanggan dari Master Pelanggan *
+                        </label>
+                        <select
+                          value={selectedCustomerId}
+                          onChange={(e) => {
+                            const cid = e.target.value;
+                            setSelectedCustomerId(cid);
+                            const found = customers.find((c) => c.id === cid);
+                            if (found) {
+                              setNewOrderData({
+                                ...newOrderData,
+                                customerName: found.name,
+                                customerPhone: found.phone,
+                                brand: found.preferredBrand || newOrderData.brand,
+                                productName: found.lastProductSpec || newOrderData.productName,
+                                dimensions: found.lastDimensions || newOrderData.dimensions,
+                                paperType: found.lastPaperType || newOrderData.paperType,
+                                finishing: found.lastFinishing || newOrderData.finishing,
+                              });
+                            }
+                          }}
+                          className="w-full h-9 px-3 rounded-lg bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3] font-medium"
+                        >
+                          <option value="">-- Pilih Nama Pelanggan Repeat ({customers.filter((c) => c.active).length} Klien Aktif) --</option>
+                          {customers
+                            .filter((c) => c.active)
+                            .map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.code} · {c.name} ({c.preferredBrand} — {c.totalRepeatOrders}x Repeat)
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+
+                      {selectedCustomerId && (
+                        <div className="p-2.5 rounded-lg bg-white dark:bg-[#16223A] border border-[#D6E3FC] dark:border-[#2563EB]/40 text-[11px] space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-[#2B5FC7] dark:text-[#60A5FA]">
+                              ✓ Data Pelanggan & Riwayat Spesifikasi Ditemukan
+                            </span>
+                            <span className="font-mono text-[#6B7684]">{newOrderData.customerPhone}</span>
+                          </div>
+                          <div className="text-[#6B7684] dark:text-[#8A94A6]">
+                            Spesifikasi terakhir otomatis dimuat: <strong>{newOrderData.productName || "-"}</strong> ({newOrderData.dimensions || "-"})
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] space-y-2.5">
+                      <div>
+                        <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
+                          Nama Perusahaan / Pelanggan Baru *
+                        </label>
+                        <input
+                          required
+                          placeholder="Contoh: PT Sumber Pangan Makmur"
+                          value={newOrderData.customerName}
+                          onChange={(e) => setNewOrderData({ ...newOrderData, customerName: e.target.value })}
+                          className="w-full h-9 px-3 rounded-lg bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
+                            Nama Kontak PIC
+                          </label>
+                          <input
+                            placeholder="Contoh: Bpk. Budi Santoso"
+                            value={newCustomerPic}
+                            onChange={(e) => setNewCustomerPic(e.target.value)}
+                            className="w-full h-9 px-3 rounded-lg bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
+                            Nomor Telepon / WhatsApp *
+                          </label>
+                          <input
+                            required
+                            placeholder="Contoh: 0812-3456-7890"
+                            value={newOrderData.customerPhone}
+                            onChange={(e) => setNewOrderData({ ...newOrderData, customerPhone: e.target.value })}
+                            className="w-full h-9 px-3 rounded-lg bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
+                          Alamat Pengiriman
+                        </label>
+                        <input
+                          placeholder="Alamat kantor / gudang pelanggan baru"
+                          value={newCustomerAddress}
+                          onChange={(e) => setNewCustomerAddress(e.target.value)}
+                          className="w-full h-9 px-3 rounded-lg bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Brand Unit Bisnis (Option Select) */}
                   <div>
                     <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
                       Pilih Brand Unit Bisnis
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {["Packsolution.id", "Estella", "Pepipapier", "memoirs.print", "pikpurry"].map((b) => (
-                        <button
-                          key={b}
-                          type="button"
-                          onClick={() => setNewOrderData({ ...newOrderData, brand: b as OrderItem["brand"] })}
-                          className={`p-2 rounded-lg border text-left transition-colors ${
-                            newOrderData.brand === b
-                              ? "bg-[#2B5FC7] border-[#2B5FC7] text-white dark:bg-[#3B6FE0]"
-                              : "bg-[#F4F6FA] dark:bg-[#0F1B2D] border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
-                          }`}
-                        >
-                          <div className="font-semibold text-[11px] truncate">{b}</div>
-                        </button>
+                    <select
+                      value={newOrderData.brand}
+                      onChange={(e) => setNewOrderData({ ...newOrderData, brand: e.target.value })}
+                      className="w-full h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3] font-medium"
+                    >
+                      {dynamicBrands.map((b) => (
+                        <option key={b} value={b}>{b}</option>
                       ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
-                      Nama Perusahaan / Pelanggan
-                    </label>
-                    <input
-                      required
-                      placeholder="Contoh: PT Sumber Pangan Makmur"
-                      value={newOrderData.customerName}
-                      onChange={(e) => setNewOrderData({ ...newOrderData, customerName: e.target.value })}
-                      className="w-full h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
-                      Nomor Telepon / WhatsApp
-                    </label>
-                    <input
-                      required
-                      placeholder="Contoh: 0812-3456-7890"
-                      value={newOrderData.customerPhone}
-                      onChange={(e) => setNewOrderData({ ...newOrderData, customerPhone: e.target.value })}
-                      className="w-full h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
-                    />
+                    </select>
                   </div>
                 </div>
               )}
 
-              {/* Step 2: Product Spec & Stock Pre-Validation */}
+              {/* Step 2: Jenis Layanan (Jasa Cetak Custom vs Jual Produk Jadi) & Stock Pre-Validation */}
               {formStep === 2 && (
-                <div className="space-y-3 text-xs">
+                <div className="space-y-3.5 text-xs">
+                  {/* Toggle Penyedia Jasa Cetak Custom vs Jual Produk Jadi */}
                   <div>
-                    <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
-                      Nama / Tipe Produk
+                    <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1.5">
+                      Jenis Pesanan (Penyedia Jasa Cetak Custom vs Penjualan Produk Jadi)
                     </label>
-                    <input
-                      required
-                      placeholder="Contoh: Hardbox Rigid Eksklusif Custom"
-                      value={newOrderData.productName}
-                      onChange={(e) => setNewOrderData({ ...newOrderData, productName: e.target.value })}
-                      className="w-full h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
-                        Dimensi (P × L × T cm)
-                      </label>
-                      <input
-                        placeholder="Contoh: 20 × 15 × 7 cm"
-                        value={newOrderData.dimensions}
-                        onChange={(e) => setNewOrderData({ ...newOrderData, dimensions: e.target.value })}
-                        className="w-full h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
-                        Jumlah Pesanan (pcs)
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={newOrderData.quantity}
-                        onChange={(e) => setNewOrderData({ ...newOrderData, quantity: Number(e.target.value) })}
-                        className="w-full h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
-                      />
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setOrderServiceType("Jasa Cetak Custom")}
+                        className={`p-2.5 rounded-lg border text-left transition-all ${
+                          orderServiceType === "Jasa Cetak Custom"
+                            ? "bg-[#EFF4FE] border-[#2B5FC7] text-[#2B5FC7] dark:bg-[#1D4ED8]/25 dark:border-[#3B6FE0] dark:text-[#93C5FD]"
+                            : "bg-[#F4F6FA] dark:bg-[#0F1B2D] border-[#E2E6ED] dark:border-[#26334D] text-[#6B7684]"
+                        }`}
+                      >
+                        <div className="font-bold text-xs">🖨️ Jasa Cetak Custom (Make-to-Order)</div>
+                        <div className="text-[10px] opacity-85 mt-0.5">
+                          Layanan utama: Custom ukuran, pilih bahan kertas plano, antrean desain & kalkulasi BOM
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOrderServiceType("Beli Produk Jadi")}
+                        className={`p-2.5 rounded-lg border text-left transition-all ${
+                          orderServiceType === "Beli Produk Jadi"
+                            ? "bg-[#FFFBEB] border-[#D97706] text-[#92400E] dark:bg-[#78350F]/30 dark:border-[#FBBF24] dark:text-[#FBBF24]"
+                            : "bg-[#F4F6FA] dark:bg-[#0F1B2D] border-[#E2E6ED] dark:border-[#26334D] text-[#6B7684]"
+                        }`}
+                      >
+                        <div className="font-bold text-xs">📦 Beli Produk Jadi (Ready Stock)</div>
+                        <div className="text-[10px] opacity-85 mt-0.5">
+                          Penjualan sampingan: Ambil dari stok Katalog Produk Jadi di gudang tanpa revisi desain
+                        </div>
+                      </button>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
-                      Pilihan Bahan Baku Kertas
-                    </label>
-                    <select
-                      value={newOrderData.paperType}
-                      onChange={(e) => setNewOrderData({ ...newOrderData, paperType: e.target.value })}
-                      className="w-full h-9 px-2.5 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
-                    >
-                      <option value="Kertas Ivory 300 GSM Plano (79 x 109 cm)">Kertas Ivory 300 GSM Plano (Gudang 1)</option>
-                      <option value="Art Paper 150 GSM Plano (65 x 100 cm)">Art Paper 150 GSM Plano (Gudang 1)</option>
-                      <option value="Kertas Duplex Coated 350 GSM">Kertas Duplex Coated 350 GSM (Gudang 2)</option>
-                      <option value="Kraft Liner Brown 275 GSM">Kraft Liner Brown 275 GSM (Gudang 2)</option>
-                    </select>
-                  </div>
+                  {orderServiceType === "Jasa Cetak Custom" ? (
+                    <>
+                      <div>
+                        <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
+                          Nama / Spesifikasi Cetakan Custom *
+                        </label>
+                        <input
+                          required
+                          placeholder="Contoh: Hardbox Rigid Eksklusif Custom Logo Foil"
+                          value={newOrderData.productName}
+                          onChange={(e) => setNewOrderData({ ...newOrderData, productName: e.target.value })}
+                          className="w-full h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
+                        />
+                      </div>
 
-                  {/* Stock Pre-Validation Alert Box */}
-                  <div className="p-3 rounded-lg bg-[#ECFDF5] dark:bg-[#064E3B]/20 border border-[#A7F3D0] dark:border-[#065F46]/50 text-[#065F46] dark:text-[#34D399]">
-                    <div className="flex items-center gap-1.5 font-bold mb-0.5">
-                      <IconCheck size={14} strokeWidth={2.5} />
-                      <span>Stock Pre-Validation: Stok Bahan Tersedia</span>
-                    </div>
-                    <p className="text-[11px] opacity-90">
-                      Sistem memeriksa ketersediaan material di gudang secara otomatis. Bahan baku cukup untuk kuantitas pesanan ini.
-                    </p>
-                  </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
+                            Dimensi Custom (P × L × T cm)
+                          </label>
+                          <input
+                            placeholder="Contoh: 20 × 15 × 7 cm"
+                            value={newOrderData.dimensions}
+                            onChange={(e) => setNewOrderData({ ...newOrderData, dimensions: e.target.value })}
+                            className="w-full h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
+                            Jumlah Pesanan Cetak (pcs)
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={newOrderData.quantity}
+                            onChange={(e) => setNewOrderData({ ...newOrderData, quantity: Number(e.target.value) })}
+                            className="w-full h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
+                          Pilihan Bahan Baku Kertas Plano
+                        </label>
+                        <select
+                          value={newOrderData.paperType}
+                          onChange={(e) => setNewOrderData({ ...newOrderData, paperType: e.target.value })}
+                          className="w-full h-9 px-2.5 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
+                        >
+                          <option value="Kertas Ivory 300 GSM Plano (79 x 109 cm)">Kertas Ivory 300 GSM Plano (Gudang 1)</option>
+                          <option value="Art Paper 150 GSM Plano (65 x 100 cm)">Art Paper 150 GSM Plano (Gudang 1)</option>
+                          <option value="Kertas Duplex Coated 350 GSM">Kertas Duplex Coated 350 GSM (Gudang 2)</option>
+                          <option value="Kraft Liner Brown 275 GSM">Kraft Liner Brown 275 GSM (Gudang 2)</option>
+                        </select>
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-[#ECFDF5] dark:bg-[#064E3B]/20 border border-[#A7F3D0] dark:border-[#065F46]/50 text-[#065F46] dark:text-[#34D399]">
+                        <div className="flex items-center gap-1.5 font-bold mb-0.5">
+                          <IconCheck size={14} strokeWidth={2.5} />
+                          <span>Pre-Validation Bahan Baku Kertas: Tersedia di Gudang</span>
+                        </div>
+                        <p className="text-[11px] opacity-90">
+                          Stok kertas plano mencukupi. Pesanan Jasa Cetak ini akan masuk ke alur Tim Design (Maks. 4x Revisi) → BOM → SPK.
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
+                          Pilih Produk Jadi (Ready Stock) dari Gudang *
+                        </label>
+                        <select
+                          value={selectedReadyProductSku}
+                          onChange={(e) => {
+                            const sku = e.target.value;
+                            setSelectedReadyProductSku(sku);
+                            const prod = (readyProducts || []).find((p) => p.sku === sku);
+                            if (prod) {
+                              const totalReady = Object.values(prod.stock || {}).reduce((a, b) => a + b, 0);
+                              setNewOrderData({
+                                ...newOrderData,
+                                brand: prod.brand || newOrderData.brand,
+                                productName: `[READY STOCK] ${prod.name}`,
+                                dimensions: `SKU: ${prod.sku}`,
+                                paperType: `Stok Gudang: ${totalReady.toLocaleString("id-ID")} pcs`,
+                              });
+                            }
+                          }}
+                          className="w-full h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3] font-medium"
+                        >
+                          <option value="">-- Pilih Item dari Katalog Produk Jadi --</option>
+                          {(readyProducts || []).map((p) => {
+                            const totalReady = Object.values(p.stock || {}).reduce((a, b) => a + b, 0);
+                            return (
+                              <option key={p.id} value={p.sku}>
+                                {p.sku} · {p.name} ({p.brand}) — Tersedia: {totalReady.toLocaleString("id-ID")} pcs
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
+                            Jumlah Pembelian (pcs/box)
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={newOrderData.quantity}
+                            onChange={(e) => setNewOrderData({ ...newOrderData, quantity: Number(e.target.value) })}
+                            className="w-full h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
+                            Alur Pengerjaan
+                          </label>
+                          <div className="h-9 px-3 rounded-lg bg-[#FFFBEB] dark:bg-[#78350F]/25 border border-[#FDE68A] text-[#92400E] dark:text-[#FBBF24] flex items-center font-semibold text-[11px]">
+                            Tanpa Desain · Langsung Packing Gudang
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-[#EFF4FE] dark:bg-[#1D4ED8]/20 border border-[#D6E3FC] dark:border-[#2563EB]/40 text-[#2B5FC7] dark:text-[#93C5FD]">
+                        <div className="flex items-center gap-1.5 font-bold mb-0.5">
+                          <IconWarehouse size={14} />
+                          <span>Validasi Stok Produk Jadi: Siap Kirim dari Gudang Transit</span>
+                        </div>
+                        <p className="text-[11px] opacity-90">
+                          Karena ini pembelian Produk Jadi (Ready Stock), pesanan tidak memerlukan antrean desain/revisi dan langsung berstatus <strong>Siap Kirim (Ready Stock)</strong>.
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -916,24 +1195,31 @@ export default function OrdersPage() {
                     type="button"
                     onClick={() => {
                       if (formStep === 1 && !newOrderData.customerName) {
-                        alert("Harap isi nama pelanggan.");
+                        alert(
+                          customerMode === "Repeat"
+                            ? "Harap pilih pelanggan dari daftar Master Pelanggan Repeat."
+                            : "Harap isi nama pelanggan baru."
+                        );
                         return;
                       }
                       setFormStep(formStep + 1);
                     }}
                     className="px-4 py-2 rounded-lg bg-[#2B5FC7] hover:bg-[#1D4FB8] dark:bg-[#3B6FE0] text-white text-xs font-medium shadow-sm"
                   >
-                    Lanjut ke Spesifikasi
+                    Lanjut ke Tahap Berikutnya →
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={() => {
+                      const isReadyStock = orderServiceType === "Beli Produk Jadi";
                       const newOrder: OrderItem = {
                         id: String(Date.now()),
                         orderNumber: `ORD-2026-${Math.floor(Math.random() * 9000 + 1000)}`,
                         customerName: newOrderData.customerName || "Pelanggan Baru",
                         customerPhone: newOrderData.customerPhone || "0812-0000-0000",
+                        customerMode,
+                        orderServiceType,
                         brand: newOrderData.brand,
                         productName: newOrderData.productName || "Custom Packaging Box",
                         dimensions: newOrderData.dimensions || "20 × 15 × 5 cm",
@@ -944,15 +1230,57 @@ export default function OrdersPage() {
                         priority: newOrderData.priority,
                         deadline: newOrderData.deadline || "30 Sep 2026",
                         orderDate: "24 Sep 2026",
-                        status: "Order Placed",
+                        status: isReadyStock ? "Siap Kirim (Ready Stock)" : "Order Placed",
                         revisionCount: 0,
                         revisionHistory: [],
                         notes: newOrderData.notes,
                       };
 
+                      // Sinkronisasi ke Master Pelanggan
+                      if (customerMode === "Baru") {
+                        const nextCode = `CUST-${String(customers.length + 1).padStart(3, "0")}`;
+                        updateCustomers([
+                          {
+                            id: `cust-${Date.now()}`,
+                            code: nextCode,
+                            name: newOrder.customerName,
+                            pic: newCustomerPic || newOrder.customerName,
+                            phone: newOrder.customerPhone,
+                            email: "",
+                            address: newCustomerAddress || "-",
+                            segment: "Korporat B2B",
+                            preferredBrand: newOrder.brand,
+                            lastProductSpec: newOrder.productName,
+                            lastDimensions: newOrder.dimensions,
+                            lastPaperType: newOrder.paperType,
+                            lastFinishing: newOrder.finishing,
+                            totalRepeatOrders: 1,
+                            active: true,
+                          },
+                          ...customers,
+                        ]);
+                      } else if (selectedCustomerId) {
+                        updateCustomers(
+                          customers.map((c) =>
+                            c.id === selectedCustomerId
+                              ? {
+                                  ...c,
+                                  totalRepeatOrders: c.totalRepeatOrders + 1,
+                                  lastProductSpec: newOrder.productName,
+                                  lastDimensions: newOrder.dimensions,
+                                  lastPaperType: newOrder.paperType,
+                                }
+                              : c
+                          )
+                        );
+                      }
+
                       setOrders([newOrder, ...orders]);
                       setShowNewOrderModal(false);
-                      triggerToast(`Pesanan ${newOrder.orderNumber} berhasil dibuat dengan status Order Placed!`);
+                      setFormStep(1);
+                      triggerToast(
+                        `Pesanan ${newOrder.orderNumber} (${orderServiceType} - Pelanggan ${customerMode}) berhasil diterbitkan!`
+                      );
                     }}
                     className="px-4 py-2 rounded-lg bg-[#2B5FC7] hover:bg-[#1D4FB8] dark:bg-[#3B6FE0] text-white text-xs font-medium shadow-sm"
                   >
@@ -1053,6 +1381,36 @@ export default function OrdersPage() {
                   >
                     Ajukan Permohonan Tambahan Revisi ke Manager
                   </button>
+                  {(user?.role === "manager" || user?.role === "owner") && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = orders.map((o) =>
+                          o.id === selectedOrderForRevision.id
+                            ? {
+                                ...o,
+                                revisionCount: 3,
+                                revisionHistory: [
+                                  ...o.revisionHistory,
+                                  {
+                                    revNumber: o.revisionHistory.length + 1,
+                                    date: `${new Date().toLocaleDateString("id-ID")} ${new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}`,
+                                    notes: `[OTORISASI ${user?.role_display?.toUpperCase()}] Kuota revisi tambahan disetujui & dibuka kembali.`,
+                                  },
+                                ],
+                              }
+                            : o
+                        );
+                        setOrders(updated);
+                        const refreshed = updated.find((o) => o.id === selectedOrderForRevision.id) || null;
+                        setSelectedOrderForRevision(refreshed);
+                        triggerToast(`Otorisasi ${user?.role_display}: Kunci revisi ${selectedOrderForRevision.orderNumber} berhasil dibuka!`);
+                      }}
+                      className="w-full py-2 px-3 rounded-lg bg-[#2B5FC7] hover:bg-[#1D4FB8] text-white font-semibold text-xs shadow-sm transition-colors"
+                    >
+                      Otorisasi {user?.role_display}: Setujui & Buka Kunci Revisi
+                    </button>
+                  )}
                 </div>
               ) : (
                 <form

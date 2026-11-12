@@ -99,6 +99,43 @@ const baseProductCrud = makeCrud<Product>("product", "p");
 export const productService = {
   ...baseProductCrud,
 
+  async get(id: string): Promise<Product> {
+    try {
+      const numericId = parseInt(id.replace(/^[a-z]+-/i, ""), 10);
+      const res = await apiClient.get(`/v1/products/${numericId || id}`);
+      const item = res.data?.data;
+      if (item) {
+        const stock = { g1: 0, g2: 0 } as any;
+        if (Array.isArray(item.warehouse_stocks)) {
+          item.warehouse_stocks.forEach((ws: any) => {
+            const wId = String(ws.warehouse_id);
+            const qty = Number(ws.qty_available) || 0;
+            if (wId === "1" || ws.warehouse_name?.includes("1") || ws.warehouse_type === "MAIN_WAREHOUSE") {
+              stock.g1 = (stock.g1 || 0) + qty;
+            } else if (wId === "2" || ws.warehouse_name?.includes("2") || ws.warehouse_type === "STORE_WAREHOUSE") {
+              stock.g2 = (stock.g2 || 0) + qty;
+            }
+            stock[wId] = qty;
+          });
+        }
+        return {
+          id: String(item.id),
+          sku: item.sku,
+          name: item.name,
+          brand: (item.brand || "Packsolution.id") as BrandName,
+          type: (item.type || "Barang Jadi") as ProductType,
+          categoryId: String(item.category_id || "cp-hardbox"),
+          unitId: item.unit || "Pcs",
+          stock,
+          minStock: Number(item.min_stock) || 0,
+        };
+      }
+      return baseProductCrud.get(id);
+    } catch {
+      return baseProductCrud.get(id);
+    }
+  },
+
   async list(): Promise<Product[]> {
     try {
       const res = await apiClient.get("/v1/products");
@@ -260,6 +297,52 @@ function resolveUnit(unit?: string): string {
 export const materialService = {
   ...baseMaterialCrud,
 
+  async get(id: string): Promise<Material> {
+    try {
+      const numericId = parseInt(id.replace(/^[a-z]+-/i, ""), 10);
+      const res = await apiClient.get(`/v1/materials/${numericId || id}`);
+      const item = res.data?.data;
+      if (item) {
+        const stock = { g1: 0, g2: 0 } as any;
+        if (Array.isArray(item.warehouse_stocks)) {
+          item.warehouse_stocks.forEach((ws: any) => {
+            const wId = String(ws.warehouse_id);
+            const qty = Number(ws.qty_available) || 0;
+            if (wId === "1" || ws.warehouse_name?.includes("1") || ws.warehouse_type === "MAIN_WAREHOUSE") {
+              stock.g1 = (stock.g1 || 0) + qty;
+            } else if (wId === "2" || ws.warehouse_name?.includes("2") || ws.warehouse_type === "STORE_WAREHOUSE") {
+              stock.g2 = (stock.g2 || 0) + qty;
+            }
+            stock[wId] = qty;
+          });
+        }
+        const brandNames = Array.isArray(item.brands)
+          ? item.brands.map((b: any) => b.name)
+          : [];
+
+        return {
+          id: String(item.id),
+          code: item.sku || item.code || `MAT-${item.id}`,
+          name: item.name,
+          categoryId: String(item.category_id),
+          brands: brandNames,
+          unitId: item.unit || "Rim",
+          stock,
+          safetyStock: Number(item.safety_stock) || 0,
+          rop: Number(item.reorder_point) || 0,
+          supplierId: String(item.supplier_id || "sp-1"),
+          gramature: item.gramature ? Number(item.gramature) : undefined,
+          dimension: item.dimension || undefined,
+          batchNo: item.batch_no || undefined,
+          expiryDate: item.expiry_date || undefined,
+        };
+      }
+      return baseMaterialCrud.get(id);
+    } catch {
+      return baseMaterialCrud.get(id);
+    }
+  },
+
   async list(): Promise<Material[]> {
     try {
       const res = await apiClient.get("/v1/materials");
@@ -382,6 +465,46 @@ const baseSparepartCrud = makeCrud<Sparepart>("sparepart", "s");
 
 export const sparepartService = {
   ...baseSparepartCrud,
+
+  async get(id: string): Promise<Sparepart> {
+    try {
+      const numericId = parseInt(id.replace(/^[a-z]+-/i, ""), 10);
+      const res = await apiClient.get(`/v1/spareparts/${numericId || id}`);
+      const item = res.data?.data;
+      if (item) {
+        const stock = { g1: 0, g2: 0 } as any;
+        if (Array.isArray(item.warehouse_stocks)) {
+          item.warehouse_stocks.forEach((ws: any) => {
+            const wId = String(ws.warehouse_id);
+            const qty = Number(ws.qty_available) || 0;
+            if (wId === "1" || ws.warehouse_name?.includes("1") || ws.warehouse_type === "MAIN_WAREHOUSE") {
+              stock.g1 = (stock.g1 || 0) + qty;
+            } else if (wId === "2" || ws.warehouse_name?.includes("2") || ws.warehouse_type === "STORE_WAREHOUSE") {
+              stock.g2 = (stock.g2 || 0) + qty;
+            }
+            stock[wId] = qty;
+          });
+        }
+        return {
+          id: String(item.id),
+          code: item.code,
+          name: item.name,
+          categoryId: String(item.category_id || "cs-consumable"),
+          unitId: item.unit || "Pcs",
+          machine: item.machine || undefined,
+          supplierId: String(item.supplier_id || "sp-1"),
+          stock,
+          safetyStock: Number(item.safety_stock) || 0,
+          rop: Number(item.reorder_point) || 0,
+          batchNo: item.batch_no || undefined,
+          expiryDate: item.expiry_date || undefined,
+        };
+      }
+      return baseSparepartCrud.get(id);
+    } catch {
+      return baseSparepartCrud.get(id);
+    }
+  },
 
   async list(): Promise<Sparepart[]> {
     try {

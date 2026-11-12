@@ -266,20 +266,18 @@ export default function SpkDigitalPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-[#6B7684] dark:text-[#8A94A6]">Brand:</span>
-            {["Semua", "Packsolution.id", "Estella", "Pepipapier", "memoirs.print"].map((b) => (
-              <button
-                key={b}
-                onClick={() => setFilterBrand(b)}
-                className={`px-2.5 py-1 rounded-lg transition-colors ${
-                  filterBrand === b
-                    ? "bg-[#2B5FC7] text-white dark:bg-[#3B6FE0]"
-                    : "bg-[#F4F6FA] text-[#6B7684] hover:text-[#1B2436] border border-[#E2E6ED] dark:bg-[#1B2A44] dark:text-[#8A94A6] dark:border-[#26334D]"
-                }`}
-              >
-                {b}
-              </button>
-            ))}
+            <span className="font-semibold text-[#6B7684] dark:text-[#8A94A6]">Filter Brand:</span>
+            <select
+              value={filterBrand}
+              onChange={(e) => setFilterBrand(e.target.value)}
+              className="h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3] text-xs font-medium focus:outline-none focus:border-[#2B5FC7]"
+            >
+              {["Semua", "Packsolution.id", "Estella", "Pepipapier", "memoirs.print", "Lavie.label"].map((b) => (
+                <option key={b} value={b}>
+                  {b === "Semua" ? "Semua Brand" : b}
+                </option>
+              ))}
+            </select>
           </div>
         </section>
 

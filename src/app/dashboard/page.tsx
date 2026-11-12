@@ -210,6 +210,7 @@ export default function DashboardPage() {
   const normalizedRole = (user?.role || "").toLowerCase().trim().replace(/[\s-]+/g, "_");
   const isGudang = normalizedRole === "staf_gudang";
 
+
   const widgets = ROLE_WIDGETS[normalizedRole] ?? ROLE_WIDGETS.owner;
 
   const dynamicBrands = useBrands();
@@ -541,23 +542,22 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            {/* Filter 5 Brand Tabs */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-              <span className="text-xs text-[#6B7684] dark:text-[#8A94A6] mr-1 hidden sm:inline">
+            {/* Filter Brand Option Select */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-[#6B7684] dark:text-[#8A94A6]">
                 Filter Brand:
               </span>
-              {brands.map((brand) => (
-                <button
-                  key={brand}
-                  onClick={() => setSelectedBrandFilter(brand)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors flex-shrink-0 ${selectedBrandFilter === brand
-                      ? "bg-[#2B5FC7] text-white dark:bg-[#3B6FE0]"
-                      : "bg-[#F4F6FA] text-[#6B7684] hover:text-[#1B2436] border border-[#E2E6ED] dark:bg-[#1B2A44] dark:text-[#8A94A6] dark:hover:text-[#E8ECF3] dark:border-[#26334D]"
-                    }`}
-                >
-                  {brand}
-                </button>
-              ))}
+              <select
+                value={selectedBrandFilter}
+                onChange={(e) => setSelectedBrandFilter(e.target.value)}
+                className="h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3] text-xs font-medium focus:outline-none focus:border-[#2B5FC7]"
+              >
+                {brands.map((brand) => (
+                  <option key={brand} value={brand}>
+                    {brand === "Semua" ? "Semua Brand" : brand}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

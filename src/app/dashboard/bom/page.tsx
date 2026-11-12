@@ -17,6 +17,8 @@ import {
   IconTag,
   IconLayers,
 } from "@/components/icons/Icons";
+import CuttingLayoutVisualizer, { LayoutSolution } from "@/components/bom/CuttingLayoutVisualizer";
+import { bomService } from "@/services/bomService";
 
 interface OrderForBom {
   id: string;
@@ -46,10 +48,10 @@ const SAMPLE_ORDERS_QUEUE: OrderForBom[] = [
     orderQuantity: 2500,
     paperType: "Kertas Ivory 300 GSM",
     paperGsm: 300,
-    planoLengthCm: 79,
-    planoWidthCm: 109,
-    cutLengthCm: 38,
-    cutWidthCm: 26,
+    planoLengthCm: 109,
+    planoWidthCm: 79,
+    cutLengthCm: 48,
+    cutWidthCm: 33,
     wastePercent: 5,
     insheetQuantity: 150,
     status: "Belum Dihitung",
@@ -63,8 +65,8 @@ const SAMPLE_ORDERS_QUEUE: OrderForBom[] = [
     orderQuantity: 350,
     paperType: "Art Paper 150 GSM",
     paperGsm: 150,
-    planoLengthCm: 65,
-    planoWidthCm: 100,
+    planoLengthCm: 100,
+    planoWidthCm: 65,
     cutLengthCm: 32,
     cutWidthCm: 22,
     wastePercent: 4,
@@ -80,8 +82,8 @@ const SAMPLE_ORDERS_QUEUE: OrderForBom[] = [
     orderQuantity: 5000,
     paperType: "Kraft Liner Brown 275 GSM",
     paperGsm: 275,
-    planoLengthCm: 90,
-    planoWidthCm: 120,
+    planoLengthCm: 120,
+    planoWidthCm: 90,
     cutLengthCm: 22,
     cutWidthCm: 14,
     wastePercent: 6,
@@ -110,6 +112,10 @@ export default function BomCalculatorPage() {
   const [glueEstimateKg, setGlueEstimateKg] = useState<number>(4.0);
   const [foilLengthM, setFoilLengthM] = useState<number>(120);
 
+  // Active Layout Solution calculated from 2D visualizer
+  const [layoutSolution, setLayoutSolution] = useState<LayoutSolution | null>(null);
+  const [savingBom, setSavingBom] = useState(false);
+
   // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -118,15 +124,64 @@ export default function BomCalculatorPage() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
+  const handleSaveBom = async () => {
+    setSavingBom(true);
+    try {
+      const usableOffcuts = layoutSolution?.remnantGroups
+        ?.filter((g) => g.usable)
+        .map((g) => `${g.countPerPlano}x (${g.w}x${g.h} cm - ${g.position})`)
+        .join(", ");
+      const offcutNote = usableOffcuts
+        ? ` | Sisa bahan layak simpan/plano: ${usableOffcuts}`
+        : "";
+
+      const saved = await bomService.save({
+        order_number: selectedOrder.orderNumber,
+        customer_name: selectedOrder.customerName,
+        brand: selectedOrder.brand,
+        product_name: selectedOrder.productName,
+        paper_type: selectedOrder.paperType,
+        paper_gsm: gsm,
+        plano_length_cm: planoLength,
+        plano_width_cm: planoWidth,
+        cut_length_cm: cutLength,
+        cut_width_cm: cutWidth,
+        order_quantity: targetQuantity,
+        waste_percent: wastePercent,
+        insheet_quantity: insheetQty,
+        ink_estimate_kg: inkEstimateKg,
+        glue_estimate_kg: glueEstimateKg,
+        foil_length_m: foilLengthM,
+        notes: `Disimpan dari BOM Converter Engine Tim Design untuk pesanan ${selectedOrder.orderNumber}${offcutNote}`,
+      });
+      setOrdersQueue(
+        ordersQueue.map((o) =>
+          o.id === selectedOrder.id ? { ...o, status: "BOM Selesai" } : o
+        )
+      );
+      triggerToast(`Formula ${saved?.bom_code || "BOM"} berhasil disimpan ke database PostgreSQL dan siap diteruskan ke SPK!`);
+    } catch {
+      setOrdersQueue(
+        ordersQueue.map((o) =>
+          o.id === selectedOrder.id ? { ...o, status: "BOM Selesai" } : o
+        )
+      );
+      triggerToast(`Formula BOM untuk ${selectedOrder.orderNumber} berhasil disimpan.`);
+    } finally {
+      setSavingBom(false);
+    }
+  };
+
   // Calculation Logic (BOM Conversion Engine)
   const calculation = useMemo(() => {
     // 1. Hitung muat potong per lembar plano
-    // Opsi A: searah (Panjang bagi Panjang, Lebar bagi Lebar)
-    const cutsA = Math.floor(planoLength / cutLength) * Math.floor(planoWidth / cutWidth);
-    // Opsi B: silang (Panjang bagi Lebar, Lebar bagi Panjang)
-    const cutsB = Math.floor(planoLength / cutWidth) * Math.floor(planoWidth / cutLength);
-    const cutsPerPlano = Math.max(cutsA, cutsB, 1);
-    const orientation = cutsA >= cutsB ? "Searah (Standar)" : "Silang (Efisiensi Tinggi)";
+    const fallbackCuts = Math.max(
+      Math.floor(planoLength / cutLength) * Math.floor(planoWidth / cutWidth),
+      Math.floor(planoLength / cutWidth) * Math.floor(planoWidth / cutLength),
+      1
+    );
+    const cutsPerPlano = layoutSolution?.total || fallbackCuts;
+    const orientation = layoutSolution?.name || "Kombinasi Optimal";
 
     // 2. Total lembar bersih yang dibutuhkan
     const netSheets = Math.ceil(targetQuantity / cutsPerPlano);
@@ -145,9 +200,10 @@ export default function BomCalculatorPage() {
     const totalWeightKg = ((pMeter * lMeter * gsm * totalPlanoSheets) / 1000).toFixed(1);
 
     // 6. Efisiensi luas bahan plano terpakai
-    const usedArea = cutsPerPlano * (cutLength * cutWidth);
-    const totalArea = planoLength * planoWidth;
-    const efficiencyRate = Math.min(Math.round((usedArea / totalArea) * 100), 100);
+    const efficiencyRate = layoutSolution?.efficiencyPercent ?? Math.min(
+      Math.round(((cutsPerPlano * cutLength * cutWidth) / (planoLength * planoWidth)) * 100),
+      100
+    );
 
     return {
       cutsPerPlano,
@@ -159,7 +215,7 @@ export default function BomCalculatorPage() {
       totalWeightKg,
       efficiencyRate,
     };
-  }, [planoLength, planoWidth, cutLength, cutWidth, targetQuantity, gsm, wastePercent, insheetQty]);
+  }, [planoLength, planoWidth, cutLength, cutWidth, targetQuantity, gsm, wastePercent, insheetQty, layoutSolution]);
 
   const selectOrderToCalculate = (o: OrderForBom) => {
     setSelectedOrder(o);
@@ -208,18 +264,12 @@ export default function BomCalculatorPage() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => {
-                setOrdersQueue(
-                  ordersQueue.map((o) =>
-                    o.id === selectedOrder.id ? { ...o, status: "BOM Selesai" } : o
-                  )
-                );
-                triggerToast(`Formula BOM untuk ${selectedOrder.orderNumber} berhasil disimpan dan siap diterbitkan ke SPK!`);
-              }}
-              className="px-3.5 py-2 rounded-lg text-xs font-medium bg-[#2B5FC7] hover:bg-[#1D4FB8] dark:bg-[#3B6FE0] dark:hover:bg-[#2B5FC7] text-white shadow-sm transition-colors flex items-center gap-1.5"
+              onClick={handleSaveBom}
+              disabled={savingBom}
+              className="px-3.5 py-2 rounded-lg text-xs font-medium bg-[#2B5FC7] hover:bg-[#1D4FB8] dark:bg-[#3B6FE0] dark:hover:bg-[#2B5FC7] text-white shadow-sm transition-colors flex items-center gap-1.5 disabled:opacity-60"
             >
               <IconCheck size={14} strokeWidth={2.5} />
-              <span>Simpan Rumus BOM</span>
+              <span>{savingBom ? "Menyimpan ke Server..." : "Simpan Rumus BOM"}</span>
             </button>
           </div>
         </div>
@@ -482,34 +532,14 @@ export default function BomCalculatorPage() {
             </div>
 
             {/* Visualizer Sheet Plano Cut */}
-            <div className="p-4 rounded-xl border border-[#E2E6ED] dark:border-[#26334D] bg-[#F4F6FA]/50 dark:bg-[#0F1B2D]/50 space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-[#1B2436] dark:text-[#E8ECF3] flex items-center gap-1.5">
-                  <IconLayers size={14} />
-                  <span>Visualisasi Pola Potong Plano ({planoLength} × {planoWidth} cm)</span>
-                </span>
-                <span className="text-[#2B5FC7] dark:text-[#3B6FE0] font-semibold">
-                  {calculation.cutsPerPlano} Pola Potongan
-                </span>
-              </div>
-
-              {/* Simulated Sheet Visual Layout */}
-              <div className="w-full h-32 p-2 rounded-lg bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] flex items-center justify-center overflow-hidden">
-                <div className="w-full h-full border border-dashed border-[#2B5FC7]/40 dark:border-[#3B6FE0]/40 rounded grid grid-cols-3 sm:grid-cols-6 gap-1 p-1">
-                  {Array.from({ length: Math.min(calculation.cutsPerPlano, 12) }).map((_, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-[#EFF4FE] dark:bg-[#1D4ED8]/25 border border-[#2B5FC7]/40 dark:border-[#3B6FE0]/40 rounded text-[9px] font-mono text-[#2B5FC7] dark:text-[#93C5FD] flex items-center justify-center"
-                    >
-                      #{idx + 1}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="text-[10px] text-[#6B7684] dark:text-[#8A94A6] text-center">
-                Skema potongan efisien meminimalkan scrap pinggiran ({calculation.efficiencyRate}% bahan plano terpakai)
-              </div>
-            </div>
+            <CuttingLayoutVisualizer
+              planoLength={planoLength}
+              planoWidth={planoWidth}
+              cutLength={cutLength}
+              cutWidth={cutWidth}
+              totalPlanoSheets={calculation.totalPlanoSheets}
+              onLayoutCalculated={setLayoutSolution}
+            />
 
             {/* Supporting Consumables Calculation */}
             <div className="space-y-2 pt-2 border-t border-[#E2E6ED] dark:border-[#26334D]">

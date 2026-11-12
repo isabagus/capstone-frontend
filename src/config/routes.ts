@@ -13,6 +13,8 @@ export const ROUTES = {
   "transaction.out": "/dashboard/transaction/out",
   "transaction.transfer": "/dashboard/transaction/transfer",
   "transaction.opname": "/dashboard/transaction/opname",
+  "master.customers": "/dashboard/master/customers",
+  "master.vendors": "/dashboard/master/vendors",
   "master.suppliers": "/dashboard/master/suppliers",
   "master.brands": "/dashboard/master/brands",
   "master.warehouses": "/dashboard/master/warehouses",

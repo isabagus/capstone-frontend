@@ -181,21 +181,22 @@ export default function ProductionKanbanPage() {
             </p>
           </div>
 
-          {/* Filter Brand */}
-          <div className="flex items-center gap-1.5 overflow-x-auto">
-            {brands.map((b) => (
-              <button
-                key={b}
-                onClick={() => setSelectedBrand(b)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                  selectedBrand === b
-                    ? "bg-[#2B5FC7] text-white dark:bg-[#3B6FE0]"
-                    : "bg-[#F4F6FA] text-[#6B7684] hover:text-[#1B2436] border border-[#E2E6ED] dark:bg-[#1B2A44] dark:text-[#8A94A6] dark:border-[#26334D]"
-                }`}
-              >
-                {b}
-              </button>
-            ))}
+          {/* Filter Brand Option Select */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-[#6B7684] dark:text-[#8A94A6]">
+              Filter Brand:
+            </span>
+            <select
+              value={selectedBrand}
+              onChange={(e) => setSelectedBrand(e.target.value)}
+              className="h-9 px-3 rounded-lg bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3] text-xs font-medium focus:outline-none focus:border-[#2B5FC7]"
+            >
+              {brands.map((b) => (
+                <option key={b} value={b}>
+                  {b === "Semua" ? "Semua Brand" : b}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -276,8 +277,8 @@ export default function ProductionKanbanPage() {
                           </div>
                         </div>
 
-                        {/* State Transition Actions */}
-                        <div className="pt-2 border-t border-[#E2E6ED] dark:border-[#26334D] flex items-center justify-between gap-1 text-[11px]">
+                        {/* State Transition Actions (Mundur & Maju) */}
+                        <div className="pt-2 border-t border-[#E2E6ED] dark:border-[#26334D] space-y-1.5 text-[11px]">
                           {col.key === "Design Approved" && (
                             <button
                               type="button"
@@ -287,33 +288,63 @@ export default function ProductionKanbanPage() {
                               }}
                               className="w-full py-1.5 px-2 rounded-md bg-[#2B5FC7] hover:bg-[#1D4FB8] dark:bg-[#3B6FE0] text-white font-medium shadow-sm transition-colors text-center"
                             >
-                              Alokasi Mesin &amp; Mulai
+                              Alokasi Mesin &amp; Mulai →
                             </button>
                           )}
 
                           {col.key === "In-Progress" && (
-                            <button
-                              type="button"
-                              onClick={() => moveTask(t.id, "Finishing")}
-                              className="w-full py-1.5 px-2 rounded-md bg-[#2B5FC7] hover:bg-[#1D4FB8] dark:bg-[#3B6FE0] text-white font-medium shadow-sm transition-colors text-center"
-                            >
-                              Selesai Cetak → Finishing
-                            </button>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => moveTask(t.id, "Design Approved")}
+                                title="Kembalikan ke tahap Antrean Cetak jika salah klik"
+                                className="py-1.5 px-2 rounded-md bg-white dark:bg-[#16223A] hover:bg-[#F4F6FA] dark:hover:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] text-[#6B7684] dark:text-[#8A94A6] hover:text-[#1B2436] dark:hover:text-[#E8ECF3] font-medium transition-colors text-center"
+                              >
+                                ← Mundur
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveTask(t.id, "Finishing")}
+                                className="py-1.5 px-2 rounded-md bg-[#2B5FC7] hover:bg-[#1D4FB8] dark:bg-[#3B6FE0] text-white font-medium shadow-sm transition-colors text-center"
+                              >
+                                Maju (Finishing) →
+                              </button>
+                            </div>
                           )}
 
                           {col.key === "Finishing" && (
-                            <button
-                              type="button"
-                              onClick={() => moveTask(t.id, "QC Pending")}
-                              className="w-full py-1.5 px-2 rounded-md bg-[#065F46] hover:bg-[#064E3B] text-white font-medium shadow-sm transition-colors text-center"
-                            >
-                              Serahkan ke Inspeksi QC →
-                            </button>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => moveTask(t.id, "In-Progress")}
+                                title="Kembalikan ke tahap Sedang Dikerjakan (Cetak) jika salah klik"
+                                className="py-1.5 px-2 rounded-md bg-white dark:bg-[#16223A] hover:bg-[#F4F6FA] dark:hover:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] text-[#6B7684] dark:text-[#8A94A6] hover:text-[#1B2436] dark:hover:text-[#E8ECF3] font-medium transition-colors text-center"
+                              >
+                                ← Mundur
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveTask(t.id, "QC Pending")}
+                                className="py-1.5 px-2 rounded-md bg-[#065F46] hover:bg-[#064E3B] text-white font-medium shadow-sm transition-colors text-center"
+                              >
+                                Maju (Ke QC) →
+                              </button>
+                            </div>
                           )}
 
                           {col.key === "QC Pending" && (
-                            <div className="w-full text-center py-1 text-[11px] font-semibold text-[#065F46] dark:text-[#34D399] bg-[#ECFDF5] dark:bg-[#064E3B]/20 rounded border border-[#A7F3D0] dark:border-[#065F46]/50">
-                              Antrean Checklist QC (MOD-05)
+                            <div className="space-y-1.5">
+                              <div className="w-full text-center py-1 text-[10px] font-semibold text-[#065F46] dark:text-[#34D399] bg-[#ECFDF5] dark:bg-[#064E3B]/20 rounded border border-[#A7F3D0] dark:border-[#065F46]/50">
+                                Antrean Checklist QC (MOD-05)
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => moveTask(t.id, "Finishing")}
+                                title="Kembalikan ke tahap Finishing jika salah klik"
+                                className="w-full py-1 px-2 rounded-md bg-white dark:bg-[#16223A] hover:bg-[#F4F6FA] dark:hover:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] text-[#6B7684] dark:text-[#8A94A6] hover:text-[#1B2436] dark:hover:text-[#E8ECF3] font-medium transition-colors text-center"
+                              >
+                                ← Mundur ke Finishing
+                              </button>
                             </div>
                           )}
                         </div>

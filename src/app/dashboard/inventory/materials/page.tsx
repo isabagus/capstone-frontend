@@ -288,7 +288,18 @@ function MaterialsContent() {
       header: "Kode Bahan",
       sortable: true,
       className: "font-mono font-medium text-[#2B5FC7] dark:text-[#93B4F5] whitespace-nowrap",
-      render: (m) => m.code,
+      render: (m) => (
+        <span
+          onClick={(e) => {
+            e.stopPropagation();
+            router.push(`/dashboard/inventory/materials/${m.id}`);
+          }}
+          className="cursor-pointer hover:underline"
+          title="Lihat Detail Bahan"
+        >
+          {m.code}
+        </span>
+      ),
     },
     {
       key: "name",

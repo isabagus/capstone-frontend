@@ -737,14 +737,25 @@ export function renderNavIcon(id: string, className?: string, size = 16) {
       return <IconLayers size={size} className={className} />;
     case "inv-spareparts":
       return <IconWrench size={size} className={className} />;
+    case "customers":
+    case "master-customers":
+      return <IconUsers size={size} className={className} />;
+    case "vendors":
+    case "master-vendors":
+      return <IconProduction size={size} className={className} />;
+    case "suppliers":
     case "master-suppliers":
       return <IconTruck size={size} className={className} />;
+    case "brands":
     case "master-brands":
       return <IconTag size={size} className={className} />;
+    case "warehouses":
     case "master-warehouses":
       return <IconWarehouse size={size} className={className} />;
+    case "units":
     case "master-units":
       return <IconRuler size={size} className={className} />;
+    case "categories":
     case "master-categories":
       return <IconFolder size={size} className={className} />;
     case "trx-history":

@@ -63,7 +63,33 @@ export default function SparepartDetailPage({ params }: PageProps) {
   const warehouses = useWarehouses();
   const { data: allMovements, loading: loadingMovements, reload: reloadMovements } = useMovements("sparepart", id);
 
-  const sparepart = useMemo(() => spareparts?.find((s) => s.id === id), [spareparts, id]);
+  const [directSparepart, setDirectSparepart] = useState<Sparepart | null>(null);
+  const [directLoading, setDirectLoading] = useState(false);
+
+  const foundSparepart = useMemo(() => {
+    if (!spareparts) return undefined;
+    return (
+      spareparts.find((s) => s.id === id) ||
+      spareparts.find((s) => s.code.toLowerCase() === id.toLowerCase()) ||
+      spareparts.find((s) => {
+        const numId = parseInt(id.replace(/^[a-z]+-/i, ""), 10);
+        return !isNaN(numId) && String(s.id) === String(numId);
+      })
+    );
+  }, [spareparts, id]);
+
+  useEffect(() => {
+    if (!foundSparepart && !loadingSpareparts) {
+      setDirectLoading(true);
+      sparepartService
+        .get(id)
+        .then((res) => setDirectSparepart(res))
+        .catch(() => setDirectSparepart(null))
+        .finally(() => setDirectLoading(false));
+    }
+  }, [foundSparepart, loadingSpareparts, id]);
+
+  const sparepart = foundSparepart || directSparepart;
 
   // Mutation modal state
   const [mutationModal, setMutationModal] = useState<{

@@ -29,6 +29,24 @@ interface AuthContextType {
   hasPermission: (permission: string) => boolean;
 }
 
+const FULL_PERMISSIONS = [
+  "inventory.view", "inventory.create", "inventory.update", "inventory.delete",
+  "inventory.transfer", "inventory.opname", "stock.transfer", "stock.opname", "batch.track",
+  "inventory.materials.view", "inventory.spareparts.view", "inventory.products.view",
+  "master.suppliers.view", "master.brands.view", "master.warehouses.view", "master.units.view", "master.categories.view", "master.manage",
+  "order.view", "order.create", "order.update", "order.revision", "order.approve",
+  "bom.view", "bom.calculate", "bom.manage",
+  "spk.view", "spk.issue", "spk.generate", "spk.download",
+  "production.view", "production.update", "production.manage", "production.assign",
+  "qc.view", "qc.inspect",
+  "rop.view", "rop.manage",
+  "usd.view", "usd.manage",
+  "invoice.view", "invoice.download",
+  "report.view", "report.export",
+  "audit.view",
+  "user.view", "user.manage",
+];
+
 // Fallback user metadata for 7 system roles
 const DEMO_USERS_MAP: Record<string, AuthUser> = {
   "owner@packsolution.dev": {
@@ -37,13 +55,7 @@ const DEMO_USERS_MAP: Record<string, AuthUser> = {
     email: "owner@packsolution.dev",
     role: "owner",
     role_display: "Owner",
-    permissions: [
-      "inventory.view", "inventory.create", "inventory.transfer", "inventory.opname",
-      "order.view", "order.create", "order.approve",
-      "bom.view", "bom.calculate", "spk.view", "spk.issue",
-      "production.view", "production.update", "qc.view", "qc.inspect",
-      "usd.view", "invoice.view", "report.view", "audit.view", "user.view",
-    ],
+    permissions: FULL_PERMISSIONS,
   },
   "manager@packsolution.dev": {
     id: 2,
@@ -51,13 +63,7 @@ const DEMO_USERS_MAP: Record<string, AuthUser> = {
     email: "manager@packsolution.dev",
     role: "manager",
     role_display: "Manager",
-    permissions: [
-      "inventory.view", "inventory.create", "inventory.transfer", "inventory.opname",
-      "order.view", "order.create", "order.approve",
-      "bom.view", "bom.calculate", "spk.view", "spk.issue",
-      "production.view", "production.update", "qc.view", "qc.inspect",
-      "usd.view", "invoice.view", "report.view", "audit.view", "user.view",
-    ],
+    permissions: FULL_PERMISSIONS,
   },
   "fo@packsolution.dev": {
     id: 3,
@@ -190,6 +196,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const hasPermission = useCallback(
     (permission: string) => {
       if (!user) return false;
+      const normalizedRole = user.role.toLowerCase().replace(/[\s-]+/g, "_");
+      if (normalizedRole === "owner" || normalizedRole === "manager") return true;
       if (!user.permissions || !Array.isArray(user.permissions)) return false;
       const pDot = permission.replace(":", ".");
       const pColon = permission.replace(".", ":");
