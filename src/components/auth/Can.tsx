@@ -1,24 +1,21 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 // =====================================================================
-// <Can permission="..."> — pembungkus tombol aksi & menu.
-//
-// FASE SAAT INI: selalu mengizinkan (return true).
-// FASE AKHIR (RBAC): ganti isi `useCan` dengan pengecekan
-//   `useAuth().hasPermission(permission)` atau matriks role-permission
-//   dari backend. Seluruh tombol yang sudah dibungkus otomatis ikut.
-//
-// Konvensi nama permission: "<grup>.<modul>.<aksi>"
-//   mis. "inventory.materials.create", "master.suppliers.deactivate",
-//        "category.products.delete", "inventory.materials.transfer"
+// <Can permission="..."> — pembungkus tombol aksi & menu berbasis RBAC.
+// Mengecek izin aktif role pengguna melalui `useAuth().hasPermission`
+// yang tersinkronisasi langsung dengan Matriks Hak Akses (RBAC).
 // =====================================================================
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function useCan(permission: string | string[]): boolean {
-  // TODO(RBAC): implementasi pengecekan permission sebenarnya.
-  return true;
+  const { user, hasPermission } = useAuth();
+  if (!user) return false;
+  if (Array.isArray(permission)) {
+    return permission.some((p) => hasPermission(p));
+  }
+  return hasPermission(permission);
 }
 
 interface CanProps {

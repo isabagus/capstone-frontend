@@ -1,22 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { useAuth } from "@/contexts/AuthContext";
 import { useBrands } from "@/hooks/useInventoryData";
 import {
-  IconProduction,
-  IconOrders,
-  IconSpk,
+  useProductionPicMaster,
+  calculatePriorityFromDeadline,
+  getFutureIsoDate,
+} from "@/services/partnerMasterStore";
+import {
   IconGear,
   IconCheck,
-  IconRefresh,
-  IconPlus,
   IconX,
-  IconTag,
   IconZap,
-  IconWarehouse,
-  IconAlertTriangle,
+  IconUsers,
 } from "@/components/icons/Icons";
 
 interface KanbanTask {
@@ -27,11 +25,10 @@ interface KanbanTask {
   brand: string;
   productName: string;
   quantity: number;
-  priority: "Normal" | "High" | "Express";
-  deadline: string;
+  deadline: string; // ISO YYYY-MM-DD
   stage: "Design Approved" | "In-Progress" | "Finishing" | "QC Pending";
   machineAssigned?: string;
-  operatorAssigned?: string;
+  operatorAssigned?: string; // Penanggung Jawab (PIC)
 }
 
 const INITIAL_TASKS: KanbanTask[] = [
@@ -43,11 +40,10 @@ const INITIAL_TASKS: KanbanTask[] = [
     brand: "Packsolution.id",
     productName: "Hardbox Rigid Premium Magnetic Gold",
     quantity: 2500,
-    priority: "Express",
-    deadline: "25 Sep 18:00 WIB",
+    deadline: getFutureIsoDate(1),
     stage: "In-Progress",
     machineAssigned: "Heidelberg SM-74 (4 Warna)",
-    operatorAssigned: "Rudi Hartono (Kepala Produksi)",
+    operatorAssigned: "Rudi Hartono (Kepala Produksi & Koordinator Mesin)",
   },
   {
     id: "2",
@@ -57,11 +53,10 @@ const INITIAL_TASKS: KanbanTask[] = [
     brand: "Pepipapier",
     productName: "Greeting Card & Custom Envelope Foil",
     quantity: 1200,
-    priority: "Normal",
-    deadline: "30 Sep 2026",
+    deadline: getFutureIsoDate(6),
     stage: "Finishing",
-    machineAssigned: "Vendor Foil Kurnia",
-    operatorAssigned: "Vendor Mitra",
+    machineAssigned: "Vendor Foil & Emboss Kurnia",
+    operatorAssigned: "Wahyu Pratama (PIC Pengawasan Subkontrak Vendor Mitra)",
   },
   {
     id: "3",
@@ -71,8 +66,7 @@ const INITIAL_TASKS: KanbanTask[] = [
     brand: "Estella",
     productName: "Softbox Skincare Serum Matte Doff",
     quantity: 5000,
-    priority: "High",
-    deadline: "28 Sep 2026",
+    deadline: getFutureIsoDate(4),
     stage: "Design Approved",
     machineAssigned: "Belum Dialokasikan",
     operatorAssigned: "Belum Ditugaskan",
@@ -85,11 +79,10 @@ const INITIAL_TASKS: KanbanTask[] = [
     brand: "memoirs.print",
     productName: "Photobook Hardcover Linen Series",
     quantity: 350,
-    priority: "High",
-    deadline: "26 Sep 2026",
+    deadline: getFutureIsoDate(2),
     stage: "QC Pending",
-    machineAssigned: "Mesin Lem Hardcover",
-    operatorAssigned: "Teknisi Finishing B",
+    machineAssigned: "Mesin Pengeleman Hotmelt Otomatis",
+    operatorAssigned: "Slamet Riyadi (Teknisi Finishing, Laminasi & Lem)",
   },
   {
     id: "5",
@@ -99,31 +92,63 @@ const INITIAL_TASKS: KanbanTask[] = [
     brand: "pikpurry",
     productName: "Packaging Snack Pouch Ziplock",
     quantity: 10000,
-    priority: "Normal",
-    deadline: "02 Okt 2026",
+    deadline: getFutureIsoDate(3),
     stage: "Finishing",
-    machineAssigned: "Mesin Ziplock Sealing",
-    operatorAssigned: "Operator C",
+    machineAssigned: "Mesin Pond & Die-Cut Bobst",
+    operatorAssigned: "Ahmad Subagio (Teknisi Pond & Die-Cut Presisi)",
+  },
+  {
+    id: "6",
+    spkNumber: "SPK-INT-2026-083",
+    orderNumber: "ORD-2026-0906",
+    customerName: "Kopi Kenangan Senja",
+    brand: "Packsolution.id",
+    productName: "Paper Cup Sleeve Double Wall Emboss",
+    quantity: 8000,
+    deadline: getFutureIsoDate(1),
+    stage: "Design Approved",
+    machineAssigned: "Belum Dialokasikan",
+    operatorAssigned: "Belum Ditugaskan",
   },
 ];
 
 const COLUMNS: { key: KanbanTask["stage"]; label: string; countBadgeColor: string }[] = [
-  { key: "Design Approved", label: "Antrean SPK Terbit", countBadgeColor: "bg-[#EFF4FE] text-[#2B5FC7] dark:bg-[#1D4ED8]/25 dark:text-[#60A5FA]" },
-  { key: "In-Progress", label: "Cetak Mesin (In-Progress)", countBadgeColor: "bg-[#FFFBEB] text-[#92400E] dark:bg-[#78350F]/30 dark:text-[#FBBF24]" },
-  { key: "Finishing", label: "Finishing / Subkontrak", countBadgeColor: "bg-[#F4F6FA] text-[#2B5FC7] dark:bg-[#1B2A44] dark:text-[#E8ECF3]" },
-  { key: "QC Pending", label: "Menunggu Inspeksi QC", countBadgeColor: "bg-[#ECFDF5] text-[#065F46] dark:bg-[#064E3B]/30 dark:text-[#34D399]" },
+  {
+    key: "Design Approved",
+    label: "Antrean SPK Terbit",
+    countBadgeColor: "bg-[#EFF4FE] text-[#2B5FC7] dark:bg-[#1D4ED8]/25 dark:text-[#60A5FA]",
+  },
+  {
+    key: "In-Progress",
+    label: "Cetak Mesin (In-Progress)",
+    countBadgeColor: "bg-[#FFFBEB] text-[#92400E] dark:bg-[#78350F]/30 dark:text-[#FBBF24]",
+  },
+  {
+    key: "Finishing",
+    label: "Finishing / Subkontrak",
+    countBadgeColor: "bg-[#F4F6FA] text-[#2B5FC7] dark:bg-[#1B2A44] dark:text-[#E8ECF3]",
+  },
+  {
+    key: "QC Pending",
+    label: "Menunggu Inspeksi QC",
+    countBadgeColor: "bg-[#ECFDF5] text-[#065F46] dark:bg-[#064E3B]/30 dark:text-[#34D399]",
+  },
 ];
 
 export default function ProductionKanbanPage() {
-  const { user } = useAuth();
   const [tasks, setTasks] = useState<KanbanTask[]>(INITIAL_TASKS);
   const [selectedBrand, setSelectedBrand] = useState<string>("Semua");
+  const [selectedPicFilter, setSelectedPicFilter] = useState<string>("Semua");
 
-  // Modal Alokasi Mesin
+  // Master Data Penanggung Jawab (PIC Produksi) — Revisi 3
+  const { pics } = useProductionPicMaster();
+  const activePics = useMemo(() => pics.filter((p) => p.active), [pics]);
+
+  // Modal Alokasi Mesin & Penanggung Jawab
   const [showAllocateModal, setShowAllocateModal] = useState<boolean>(false);
   const [taskToAllocate, setTaskToAllocate] = useState<KanbanTask | null>(null);
   const [selectedMachine, setSelectedMachine] = useState<string>("Heidelberg SM-74 (4 Warna)");
-  const [selectedOperator, setSelectedOperator] = useState<string>("Rudi Hartono (Kepala Produksi)");
+  const [selectedPicId, setSelectedPicId] = useState<string>("");
 
   // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -134,19 +159,38 @@ export default function ProductionKanbanPage() {
   };
 
   const moveTask = (taskId: string, targetStage: KanbanTask["stage"]) => {
-    setTasks(
-      tasks.map((t) => (t.id === taskId ? { ...t, stage: targetStage } : t))
-    );
+    setTasks(tasks.map((t) => (t.id === taskId ? { ...t, stage: targetStage } : t)));
     triggerToast(`Status kartu berhasil diperbarui ke tahap ${targetStage}!`);
   };
 
   const dynamicBrands = useBrands();
   const brands = ["Semua", ...dynamicBrands];
 
-  const filteredTasks = tasks.filter((t) => {
-    if (selectedBrand !== "Semua" && t.brand.toLowerCase() !== selectedBrand.toLowerCase()) return false;
-    return true;
-  });
+  // Hitung prioritas otomatis dari deadline dan urutkan berdasar deadline paling mepet (Revisi 2)
+  const enrichedTasks = useMemo(() => {
+    return tasks
+      .map((t) => {
+        const pInfo = calculatePriorityFromDeadline(t.deadline);
+        return {
+          ...t,
+          priority: pInfo.priority,
+          deadlineInfo: pInfo,
+        };
+      })
+      .filter((t) => {
+        if (selectedBrand !== "Semua" && t.brand.toLowerCase() !== selectedBrand.toLowerCase()) {
+          return false;
+        }
+        if (
+          selectedPicFilter !== "Semua" &&
+          !(t.operatorAssigned || "").toLowerCase().includes(selectedPicFilter.toLowerCase())
+        ) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => a.deadline.localeCompare(b.deadline));
+  }, [tasks, selectedBrand, selectedPicFilter]);
 
   return (
     <DashboardLayout title="Papan Kanban Produksi">
@@ -165,45 +209,71 @@ export default function ProductionKanbanPage() {
         )}
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#E2E6ED] dark:border-[#26334D]">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-2 border-b border-[#E2E6ED] dark:border-[#26334D]">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="inline-block w-2 h-2 rounded-full bg-[#2B5FC7] dark:bg-[#3B6FE0]" />
               <span className="text-xs font-semibold uppercase tracking-wider text-[#2B5FC7] dark:text-[#3B6FE0]">
-                MOD-05 · Pelacakan Alur Kerja Produksi & Alokasi Mesin
+                MOD-05 · Antrean Berbasis Deadline Terdekat &amp; Master Penanggung Jawab
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-[#1B2436] dark:text-[#E8ECF3] tracking-tight">
               Papan Kanban Produksi Real-Time
             </h2>
             <p className="text-xs sm:text-sm text-[#6B7684] dark:text-[#8A94A6] mt-0.5">
-              Pantau antrean pesanan berdasarkan prioritas deadline, alokasikan mesin, dan teruskan ke tahap inspeksi QC.
+              Antrean produksi diurutkan otomatis dari deadline paling mepet, dilengkapi penugasan Penanggung Jawab (PIC) dari Master Data.
             </p>
           </div>
 
-          {/* Filter Brand Option Select */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[#6B7684] dark:text-[#8A94A6]">
-              Filter Brand:
-            </span>
-            <select
-              value={selectedBrand}
-              onChange={(e) => setSelectedBrand(e.target.value)}
-              className="h-9 px-3 rounded-lg bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3] text-xs font-medium focus:outline-none focus:border-[#2B5FC7]"
+          {/* Filter Brand, Filter PIC & Link Master Penanggung Jawab */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-[#6B7684] dark:text-[#8A94A6]">Brand:</span>
+              <select
+                value={selectedBrand}
+                onChange={(e) => setSelectedBrand(e.target.value)}
+                className="h-9 px-2.5 rounded-lg bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3] text-xs font-medium focus:outline-none focus:border-[#2B5FC7]"
+              >
+                {brands.map((b) => (
+                  <option key={b} value={b}>
+                    {b === "Semua" ? "Semua Brand" : b}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-[#6B7684] dark:text-[#8A94A6]">
+                Penanggung Jawab:
+              </span>
+              <select
+                value={selectedPicFilter}
+                onChange={(e) => setSelectedPicFilter(e.target.value)}
+                className="h-9 px-2.5 rounded-lg bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3] text-xs font-medium focus:outline-none focus:border-[#2B5FC7]"
+              >
+                <option value="Semua">Semua PIC ({activePics.length})</option>
+                {activePics.map((p) => (
+                  <option key={p.id} value={p.name}>
+                    {p.code} · {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <Link
+              href="/dashboard/master/pic"
+              className="h-9 px-3 rounded-lg bg-[#EFF4FE] hover:bg-[#D6E3FC] dark:bg-[#1D4ED8]/25 text-[#2B5FC7] dark:text-[#93C5FD] border border-[#D6E3FC] dark:border-[#2563EB]/40 text-xs font-semibold flex items-center gap-1.5 transition-colors"
             >
-              {brands.map((b) => (
-                <option key={b} value={b}>
-                  {b === "Semua" ? "Semua Brand" : b}
-                </option>
-              ))}
-            </select>
+              <IconUsers size={13} />
+              <span>Kelola Master PIC</span>
+            </Link>
           </div>
         </div>
 
         {/* Kanban Board Grid (4 Columns) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
           {COLUMNS.map((col) => {
-            const colTasks = filteredTasks.filter((t) => t.stage === col.key);
+            const colTasks = enrichedTasks.filter((t) => t.stage === col.key);
 
             return (
               <div
@@ -227,26 +297,39 @@ export default function ProductionKanbanPage() {
                       Tidak ada antrean
                     </div>
                   ) : (
-                    colTasks.map((t) => (
+                    colTasks.map((t, index) => (
                       <div
                         key={t.id}
                         className={`p-3.5 rounded-xl border bg-[#F4F6FA] dark:bg-[#0F1B2D] border-[#E2E6ED] dark:border-[#26334D] shadow-sm space-y-2 transition-all ${
-                          t.priority === "Express" ? "border-l-4 border-l-[#991B1B] dark:border-l-[#F87171]" : ""
+                          t.priority === "Express"
+                            ? "border-l-4 border-l-[#991B1B] dark:border-l-[#F87171]"
+                            : t.priority === "High"
+                            ? "border-l-4 border-l-[#D97706] dark:border-l-[#FBBF24]"
+                            : ""
                         }`}
                       >
-                        {/* Top: SPK & Priority Badge */}
+                        {/* Top: Queue Rank, SPK & Auto Priority Badge */}
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-mono font-bold text-[#2B5FC7] dark:text-[#3B6FE0]">
-                            {t.spkNumber}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="px-1.5 py-0.2 rounded bg-[#2B5FC7]/10 text-[#2B5FC7] dark:text-[#60A5FA] font-mono font-bold text-[10px]">
+                              #{index + 1}
+                            </span>
+                            <span className="font-mono font-bold text-[#2B5FC7] dark:text-[#3B6FE0]">
+                              {t.spkNumber}
+                            </span>
+                          </div>
                           {t.priority === "Express" ? (
                             <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-bold bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA] animate-pulse">
                               <IconZap size={10} strokeWidth={2.5} />
                               <span>Express</span>
                             </span>
+                          ) : t.priority === "High" ? (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A]">
+                              High
+                            </span>
                           ) : (
                             <span className="px-1.5 py-0.2 rounded text-[10px] bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] text-[#6B7684] dark:text-[#8A94A6]">
-                              {t.priority}
+                              Normal
                             </span>
                           )}
                         </div>
@@ -264,16 +347,17 @@ export default function ProductionKanbanPage() {
                           </div>
                         </div>
 
-                        {/* Machine & Operator Info */}
-                        <div className="p-2 rounded bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] text-[10px] space-y-0.5">
+                        {/* Machine & Penanggung Jawab (PIC) Info */}
+                        <div className="p-2 rounded bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] text-[10px] space-y-1">
                           <div className="text-[#1B2436] dark:text-[#E8ECF3] font-medium truncate">
                             ⚙️ {t.machineAssigned || "Belum Alokasi"}
                           </div>
-                          <div className="text-[#6B7684] dark:text-[#8A94A6] truncate">
-                            👤 {t.operatorAssigned || "Belum Teknisi"}
+                          <div className="text-[#2B5FC7] dark:text-[#93C5FD] font-semibold truncate">
+                            👤 PIC: {t.operatorAssigned || "Belum Ditugaskan"}
                           </div>
-                          <div className="text-[#991B1B] dark:text-[#F87171] font-mono mt-1 font-semibold">
-                            ⏰ Deadline: {t.deadline}
+                          <div className="text-[#991B1B] dark:text-[#F87171] font-mono pt-0.5 border-t border-[#E2E6ED]/60 dark:border-[#26334D]/60 font-semibold flex items-center justify-between">
+                            <span>⏰ {t.deadlineInfo.formattedDeadline}</span>
+                            <span>{t.deadlineInfo.countdownLabel}</span>
                           </div>
                         </div>
 
@@ -284,11 +368,16 @@ export default function ProductionKanbanPage() {
                               type="button"
                               onClick={() => {
                                 setTaskToAllocate(t);
+                                const firstPic = activePics[0];
+                                if (firstPic) {
+                                  setSelectedPicId(firstPic.id);
+                                  setSelectedMachine(firstPic.defaultMachine);
+                                }
                                 setShowAllocateModal(true);
                               }}
                               className="w-full py-1.5 px-2 rounded-md bg-[#2B5FC7] hover:bg-[#1D4FB8] dark:bg-[#3B6FE0] text-white font-medium shadow-sm transition-colors text-center"
                             >
-                              Alokasi Mesin &amp; Mulai →
+                              Pilih PIC, Mesin &amp; Mulai →
                             </button>
                           )}
 
@@ -357,7 +446,7 @@ export default function ProductionKanbanPage() {
           })}
         </div>
 
-        {/* Modal Alokasi Mesin & Teknisi */}
+        {/* Modal Alokasi Mesin & Penanggung Jawab (Terhubung ke Master PIC) */}
         {showAllocateModal && taskToAllocate && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className="w-full max-w-md rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-xl p-5 space-y-4">
@@ -365,7 +454,7 @@ export default function ProductionKanbanPage() {
                 <div>
                   <h3 className="text-sm font-bold text-[#1B2436] dark:text-[#E8ECF3] flex items-center gap-1.5">
                     <IconGear size={15} />
-                    <span>Alokasi Mesin &amp; Teknisi Produksi</span>
+                    <span>Alokasi Mesin &amp; Penanggung Jawab (PIC)</span>
                   </h3>
                   <p className="text-xs text-[#6B7684] dark:text-[#8A94A6]">
                     SPK: {taskToAllocate.spkNumber} ({taskToAllocate.productName})
@@ -381,8 +470,40 @@ export default function ProductionKanbanPage() {
 
               <div className="space-y-3 text-xs">
                 <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-semibold text-[#1B2436] dark:text-[#E8ECF3]">
+                      Pilih Penanggung Jawab (dari Master PIC) *
+                    </label>
+                    <Link
+                      href="/dashboard/master/pic"
+                      className="text-[11px] font-medium text-[#2B5FC7] hover:underline"
+                    >
+                      + Tambah/Kelola Master PIC →
+                    </Link>
+                  </div>
+                  <select
+                    value={selectedPicId}
+                    onChange={(e) => {
+                      const pid = e.target.value;
+                      setSelectedPicId(pid);
+                      const foundPic = activePics.find((p) => p.id === pid);
+                      if (foundPic) {
+                        setSelectedMachine(foundPic.defaultMachine);
+                      }
+                    }}
+                    className="w-full h-9 px-2.5 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3] font-medium"
+                  >
+                    {activePics.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.code} · {p.name} ({p.roleTitle} — {p.shift})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
-                    Pilih Mesin Produksi
+                    Pilih Mesin Produksi / Stasiun Kerja
                   </label>
                   <select
                     value={selectedMachine}
@@ -390,24 +511,11 @@ export default function ProductionKanbanPage() {
                     className="w-full h-9 px-2.5 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
                   >
                     <option value="Heidelberg SM-74 (4 Warna)">Heidelberg SM-74 (4 Warna Utama)</option>
-                    <option value="Oliver 58 (1 Warna / Cetak Khusus)">Oliver 58 (1 Warna / Khusus)</option>
+                    <option value="Heidelberg SM-52 / SM-74">Heidelberg SM-52 / SM-74</option>
+                    <option value="Oliver 58 / Komori L-428">Oliver 58 / Komori L-428</option>
                     <option value="Mesin Pond & Die-Cut Bobst">Mesin Pond &amp; Die-Cut Bobst</option>
                     <option value="Mesin Pengeleman Hotmelt Otomatis">Mesin Pengeleman Hotmelt Otomatis</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
-                    Teknisi Penanggung Jawab
-                  </label>
-                  <select
-                    value={selectedOperator}
-                    onChange={(e) => setSelectedOperator(e.target.value)}
-                    className="w-full h-9 px-2.5 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
-                  >
-                    <option value="Rudi Hartono (Kepala Produksi)">Rudi Hartono (Kepala Produksi)</option>
-                    <option value="Teknisi Cetak Senior A">Teknisi Cetak Senior A</option>
-                    <option value="Teknisi Finishing B">Teknisi Finishing B</option>
+                    <option value="Vendor Foil & Emboss Kurnia / Komori">Vendor Foil &amp; Emboss Kurnia / Komori</option>
                   </select>
                 </div>
               </div>
@@ -423,24 +531,31 @@ export default function ProductionKanbanPage() {
                 <button
                   type="button"
                   onClick={() => {
+                    const chosenPic = activePics.find((p) => p.id === selectedPicId) || activePics[0];
+                    const picLabel = chosenPic
+                      ? `${chosenPic.name} (${chosenPic.roleTitle})`
+                      : "Rudi Hartono (Kepala Produksi)";
+
                     setTasks(
                       tasks.map((t) =>
                         t.id === taskToAllocate.id
                           ? {
                               ...t,
                               machineAssigned: selectedMachine,
-                              operatorAssigned: selectedOperator,
+                              operatorAssigned: picLabel,
                               stage: "In-Progress",
                             }
                           : t
                       )
                     );
                     setShowAllocateModal(false);
-                    triggerToast(`Tugas ${taskToAllocate.spkNumber} berhasil dialokasikan dan status berpindah ke In-Progress!`);
+                    triggerToast(
+                      `SPK ${taskToAllocate.spkNumber} ditugaskan ke ${picLabel} dan masuk tahap In-Progress!`
+                    );
                   }}
                   className="px-4 py-2 rounded-lg bg-[#2B5FC7] hover:bg-[#1D4FB8] dark:bg-[#3B6FE0] text-white text-xs font-medium shadow-sm"
                 >
-                  Tetapkan &amp; Mulai Pengerjaan
+                  Tetapkan PIC &amp; Mulai Pengerjaan
                 </button>
               </div>
             </div>

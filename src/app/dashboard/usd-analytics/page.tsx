@@ -238,7 +238,7 @@ export default function UsdAnalyticsPage() {
         )}
 
         {/* 4 Top Summary Cards — Fokus Valuasi & Prediksi Stok Impor */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
           {/* Card 1: Kurs Spot Saat Ini */}
           <div className="p-4 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-sm">
             <div className="flex items-center justify-between text-[#6B7684] dark:text-[#8A94A6] text-xs">

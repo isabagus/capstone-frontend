@@ -29,10 +29,10 @@ export default function BottomNav({ onOpenMenu, onOpenRopModal }: BottomNavProps
       case "staf_gudang":
         return { id: "inv-materials", label: "Bahan Baku", href: "/dashboard/inventory/materials" };
       case "manager":
-        return { id: "reports", label: "Laporan", href: "/dashboard/reports" };
+        return { id: "report-orders", label: "Laporan", href: "/dashboard/reports/orders" };
       case "owner":
       default:
-        return { id: "reports", label: "Laporan", href: "/dashboard/reports" };
+        return { id: "report-orders", label: "Laporan", href: "/dashboard/reports/orders" };
     }
   };
 

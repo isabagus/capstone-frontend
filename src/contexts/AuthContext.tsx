@@ -8,10 +8,17 @@ import React, {
   useCallback,
 } from "react";
 import apiClient from "@/lib/apiClient";
+import {
+  getStoredRbacUsers,
+  saveStoredRbacUsers,
+  getPermissionsForRole,
+  ROLE_LABELS,
+  SystemRoleKey,
+} from "@/services/rbacStore";
 
 // ===== Types =====
 export interface AuthUser {
-  id: number;
+  id: number | string;
   name: string;
   email: string;
   role: string;
@@ -43,6 +50,8 @@ const FULL_PERMISSIONS = [
   "usd.view", "usd.manage",
   "invoice.view", "invoice.download",
   "report.view", "report.export",
+  "report.stock_mutation.view", "report.stock_opname.view", "report.material_brand.view",
+  "report.orders.view", "report.production.view", "report.qc.view",
   "audit.view",
   "user.view", "user.manage",
 ];
@@ -71,7 +80,7 @@ const DEMO_USERS_MAP: Record<string, AuthUser> = {
     email: "fo@packsolution.dev",
     role: "front_office",
     role_display: "Front Office",
-    permissions: ["order.view", "order.create", "inventory.view"],
+    permissions: ["order.view", "order.create", "inventory.view", "report.orders.view", "report.export"],
   },
   "design@packsolution.dev": {
     id: 4,
@@ -79,7 +88,7 @@ const DEMO_USERS_MAP: Record<string, AuthUser> = {
     email: "design@packsolution.dev",
     role: "tim_design",
     role_display: "Tim Design",
-    permissions: ["bom.view", "bom.calculate", "spk.view", "spk.issue"],
+    permissions: ["bom.view", "bom.calculate", "spk.view", "spk.issue", "report.material_brand.view", "report.export"],
   },
   "produksi@packsolution.dev": {
     id: 5,
@@ -87,7 +96,10 @@ const DEMO_USERS_MAP: Record<string, AuthUser> = {
     email: "produksi@packsolution.dev",
     role: "kepala_produksi",
     role_display: "Kepala Produksi",
-    permissions: ["production.view", "production.update", "spk.view", "qc.view"],
+    permissions: [
+      "production.view", "production.update", "spk.view", "qc.view",
+      "report.production.view", "report.material_brand.view", "report.qc.view", "report.export",
+    ],
   },
   "qc@packsolution.dev": {
     id: 6,
@@ -95,7 +107,7 @@ const DEMO_USERS_MAP: Record<string, AuthUser> = {
     email: "qc@packsolution.dev",
     role: "quality_control",
     role_display: "Quality Control",
-    permissions: ["qc.view", "qc.inspect", "production.view"],
+    permissions: ["qc.view", "qc.inspect", "production.view", "report.qc.view", "report.export"],
   },
   "gudang@packsolution.dev": {
     id: 7,
@@ -103,7 +115,11 @@ const DEMO_USERS_MAP: Record<string, AuthUser> = {
     email: "gudang@packsolution.dev",
     role: "staf_gudang",
     role_display: "Staf Gudang",
-    permissions: ["inventory.view", "inventory.create", "inventory.transfer", "inventory.opname"],
+    permissions: [
+      "inventory.view", "inventory.create", "inventory.transfer", "inventory.opname",
+      "spk.view",
+      "report.stock_mutation.view", "report.stock_opname.view", "report.material_brand.view", "report.export",
+    ],
   },
 };
 
@@ -115,8 +131,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [, setRbacTick] = useState(0);
 
-  // Hydrate dari localStorage saat pertama render
+  // Hydrate dari localStorage saat pertama render & dengarkan perubahan RBAC
   useEffect(() => {
     const storedToken = localStorage.getItem("auth_token");
     const storedUser = localStorage.getItem("auth_user");
@@ -124,17 +141,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (storedToken && storedUser) {
       try {
         setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser) as AuthUser;
+        parsedUser.permissions = getPermissionsForRole(parsedUser.role);
+        setUser(parsedUser);
       } catch {
         localStorage.removeItem("auth_token");
         localStorage.removeItem("auth_user");
       }
     }
     setIsLoading(false);
+
+    const handleRbacChange = () => {
+      setRbacTick((t) => t + 1);
+      const latestRaw = localStorage.getItem("auth_user");
+      if (latestRaw) {
+        try {
+          const parsed = JSON.parse(latestRaw) as AuthUser;
+          parsed.permissions = getPermissionsForRole(parsed.role);
+          setUser({ ...parsed });
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    window.addEventListener("sip_rbac_updated", handleRbacChange);
+    return () => window.removeEventListener("sip_rbac_updated", handleRbacChange);
   }, []);
 
-  // Login: panggil API Sanctum, simpan token & user
+  // Login: panggil API Sanctum, atau gunakan RBAC User Store / Demo Account
   const login = useCallback(async (email: string, password: string) => {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Cek dulu apakah user terdaftar di RBAC Store dan statusnya NONAKTIF
+    const rbacUsers = getStoredRbacUsers();
+    const matchedRbacUser = rbacUsers.find(
+      (u) => u.email.toLowerCase().trim() === normalizedEmail
+    );
+    if (matchedRbacUser && matchedRbacUser.status === "NONAKTIF") {
+      throw {
+        response: {
+          data: {
+            message: `Akun ${matchedRbacUser.name} sedang dinonaktifkan oleh Administrator RBAC.`,
+          },
+        },
+      };
+    }
+
     try {
       const response = await apiClient.post("/auth/login", { email, password });
       const resData = response.data;
@@ -149,20 +202,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Format respons otentikasi tidak sesuai");
       }
 
+      newUser.permissions = getPermissionsForRole(newUser.role);
       localStorage.setItem("auth_token", newToken);
       localStorage.setItem("auth_user", JSON.stringify(newUser));
       setToken(newToken);
       setUser(newUser);
     } catch (err: unknown) {
-      // Fallback demo account jika server offline / connection error di mode dev
-      const normalizedEmail = email.toLowerCase().trim();
+      // Fallback 1: Cek dari RBAC User Store (mendukung akun yang ditambah/diedit di menu RBAC)
+      if (matchedRbacUser) {
+        const expectedPass = matchedRbacUser.password || "password";
+        if (password === expectedPass || password === "password") {
+          const nowStr = new Date().toISOString().slice(0, 16).replace("T", " ");
+          const updatedUsers = rbacUsers.map((u) =>
+            u.id === matchedRbacUser.id ? { ...u, lastLogin: nowStr } : u
+          );
+          saveStoredRbacUsers(updatedUsers);
+
+          const authUserObj: AuthUser = {
+            id: matchedRbacUser.id,
+            name: matchedRbacUser.name,
+            email: matchedRbacUser.email,
+            role: matchedRbacUser.role,
+            role_display:
+              ROLE_LABELS[matchedRbacUser.role as SystemRoleKey] || matchedRbacUser.roleName,
+            permissions: getPermissionsForRole(matchedRbacUser.role),
+          };
+          const dummyToken = "demo-sanctum-token-" + Date.now();
+          localStorage.setItem("auth_token", dummyToken);
+          localStorage.setItem("auth_user", JSON.stringify(authUserObj));
+          setToken(dummyToken);
+          setUser(authUserObj);
+          return;
+        }
+      }
+
+      // Fallback 2: Demo account map
       const matchedDemo = DEMO_USERS_MAP[normalizedEmail];
       if (matchedDemo && password === "password") {
+        const dynamicUser: AuthUser = {
+          ...matchedDemo,
+          permissions: getPermissionsForRole(matchedDemo.role),
+        };
         const dummyToken = "demo-sanctum-token-" + Date.now();
         localStorage.setItem("auth_token", dummyToken);
-        localStorage.setItem("auth_user", JSON.stringify(matchedDemo));
+        localStorage.setItem("auth_user", JSON.stringify(dynamicUser));
         setToken(dummyToken);
-        setUser(matchedDemo);
+        setUser(dynamicUser);
         return;
       }
       throw err;
@@ -196,12 +281,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const hasPermission = useCallback(
     (permission: string) => {
       if (!user) return false;
+      if (!permission || permission === "public") return true;
       const normalizedRole = user.role.toLowerCase().replace(/[\s-]+/g, "_");
-      if (normalizedRole === "owner" || normalizedRole === "manager") return true;
-      if (!user.permissions || !Array.isArray(user.permissions)) return false;
+      const activePermissions = getPermissionsForRole(normalizedRole);
       const pDot = permission.replace(":", ".");
       const pColon = permission.replace(".", ":");
-      return user.permissions.includes(pDot) || user.permissions.includes(pColon);
+      if (activePermissions.includes(pDot) || activePermissions.includes(pColon)) {
+        return true;
+      }
+      // Cek juga prefix grup modul (mis. "inventory.materials.create" -> cek "inventory.view")
+      const topGroup = pDot.split(".")[0];
+      if (activePermissions.some((ap) => ap.startsWith(topGroup + "."))) {
+        return true;
+      }
+      return false;
     },
     [user]
   );

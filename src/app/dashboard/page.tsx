@@ -44,15 +44,15 @@ interface StatWidget {
 
 const ROLE_WIDGETS: Record<string, StatWidget[]> = {
   owner: [
-    { title: "Pemasukan Sebulan (Omzet)", value: "Rp 136,5 Jt", desc: "Jasa Cetak + Produk Jadi", change: "+12.4%", changeType: "positive", iconKey: "invoice", href: "/dashboard/reports" },
-    { title: "Pengeluaran Sebulan", value: "Rp 94,7 Jt", desc: "Bahan Supplier, Maklon & Mesin", change: "Terkendali", changeType: "neutral", iconKey: "orders", href: "/dashboard/reports" },
-    { title: "Profit Bersih Sebulan", value: "+Rp 41,8 Jt", desc: "Net Margin 30.6% bulan ini", change: "+14.2%", changeType: "positive", iconKey: "check", href: "/dashboard/reports" },
-    { title: "Valuasi Stok Gudang", value: "Rp 115,6 Jt", desc: "Gudang 1 (Pabrik) & Gudang 2", change: "2 Gudang Aktif", changeType: "positive", iconKey: "warehouse", href: "/dashboard/reports" },
+    { title: "Pemasukan Sebulan (Omzet)", value: "Rp 136,5 Jt", desc: "Jasa Cetak + Produk Jadi", change: "+12.4%", changeType: "positive", iconKey: "invoice", href: "/dashboard/reports/orders" },
+    { title: "Pengeluaran Sebulan", value: "Rp 94,7 Jt", desc: "Bahan Supplier, Maklon & Mesin", change: "Terkendali", changeType: "neutral", iconKey: "orders", href: "/dashboard/reports/material-by-brand" },
+    { title: "Profit Bersih Sebulan", value: "+Rp 41,8 Jt", desc: "Net Margin 30.6% bulan ini", change: "+14.2%", changeType: "positive", iconKey: "check", href: "/dashboard/reports/orders" },
+    { title: "Valuasi Stok Gudang", value: "Rp 115,6 Jt", desc: "Gudang 1 (Pabrik) & Gudang 2", change: "2 Gudang Aktif", changeType: "positive", iconKey: "warehouse", href: "/dashboard/reports/stock-mutation" },
   ],
   manager: [
-    { title: "Pemasukan Sebulan (Omzet)", value: "Rp 136,5 Jt", desc: "Jasa Cetak + Produk Jadi", change: "+12.4%", changeType: "positive", iconKey: "invoice", href: "/dashboard/reports" },
-    { title: "Pengeluaran Sebulan", value: "Rp 94,7 Jt", desc: "Bahan Supplier, Maklon & Mesin", change: "Terkendali", changeType: "neutral", iconKey: "orders", href: "/dashboard/reports" },
-    { title: "Profit Bersih Sebulan", value: "+Rp 41,8 Jt", desc: "Net Margin 30.6% bulan ini", change: "+14.2%", changeType: "positive", iconKey: "check", href: "/dashboard/reports" },
+    { title: "Pemasukan Sebulan (Omzet)", value: "Rp 136,5 Jt", desc: "Jasa Cetak + Produk Jadi", change: "+12.4%", changeType: "positive", iconKey: "invoice", href: "/dashboard/reports/orders" },
+    { title: "Pengeluaran Sebulan", value: "Rp 94,7 Jt", desc: "Bahan Supplier, Maklon & Mesin", change: "Terkendali", changeType: "neutral", iconKey: "orders", href: "/dashboard/reports/material-by-brand" },
+    { title: "Profit Bersih Sebulan", value: "+Rp 41,8 Jt", desc: "Net Margin 30.6% bulan ini", change: "+14.2%", changeType: "positive", iconKey: "check", href: "/dashboard/reports/orders" },
     { title: "Peringatan Ambang (ROP)", value: "3 Bahan", desc: "Perlu reorder ke Supplier", change: "Cek Gudang", changeType: "negative", iconKey: "alert", href: "/dashboard/inventory/materials" },
   ],
   front_office: [
@@ -283,7 +283,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2 mb-1">
               <span className="inline-block w-2 h-2 rounded-full bg-[#2B5FC7] dark:bg-[#3B6FE0]" />
               <span className="text-xs font-semibold uppercase tracking-wider text-[#2B5FC7] dark:text-[#3B6FE0]">
-                Sistem ERP / CRM CV Solusi Inovasi Packaging
+                MINI ERP · CV Solusi Inovasi Packaging
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-[#1B2436] dark:text-[#E8ECF3] tracking-tight">
@@ -346,12 +346,12 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
             {widgets.map((w, i) => {
               const cardContent = (
                 <>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-[#6B7684] dark:text-[#8A94A6] flex items-center gap-1">
+                  <div className="flex items-start justify-between gap-1.5 mb-1.5 sm:mb-2">
+                    <span className="text-[11px] sm:text-xs font-medium text-[#6B7684] dark:text-[#8A94A6] flex items-center gap-1 leading-snug">
                       {w.title}
                       {w.href && (
                         <span className="text-[#2B5FC7] dark:text-[#93B4F5] opacity-0 group-hover:opacity-100 transition-opacity">
@@ -359,22 +359,22 @@ export default function DashboardPage() {
                         </span>
                       )}
                     </span>
-                    <span className="p-1.5 rounded-lg bg-[#F4F6FA] dark:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] flex items-center justify-center">
+                    <span className="p-1 sm:p-1.5 rounded-lg bg-[#F4F6FA] dark:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] flex items-center justify-center shrink-0">
                       {renderWidgetIcon(w.iconKey)}
                     </span>
                   </div>
 
-                  <div className="text-2xl font-bold text-[#1B2436] dark:text-[#E8ECF3] mb-1 tracking-tight">
+                  <div className="text-lg sm:text-2xl font-bold text-[#1B2436] dark:text-[#E8ECF3] mb-1 tracking-tight">
                     {w.value}
                   </div>
 
-                  <div className="flex items-center justify-between text-xs pt-1 border-t border-[#E2E6ED]/60 dark:border-[#26334D]/60 mt-2">
-                    <span className="text-[#6B7684] dark:text-[#8A94A6] text-[11px] truncate">
+                  <div className="flex flex-wrap items-center justify-between gap-1 text-xs pt-1 border-t border-[#E2E6ED]/60 dark:border-[#26334D]/60 mt-1.5 sm:mt-2">
+                    <span className="text-[#6B7684] dark:text-[#8A94A6] text-[10px] sm:text-[11px] truncate">
                       {w.desc}
                     </span>
                     {w.change && (
                       <span
-                        className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${w.changeType === "positive"
+                        className={`text-[10px] sm:text-[11px] font-medium px-1.5 py-0.5 rounded whitespace-nowrap ${w.changeType === "positive"
                             ? "bg-[#ECFDF5] text-[#065F46] dark:bg-[#064E3B]/30 dark:text-[#34D399]"
                             : w.changeType === "negative"
                               ? "bg-[#FEF2F2] text-[#991B1B] dark:bg-[#7F1D1D]/30 dark:text-[#F87171]"
@@ -392,14 +392,14 @@ export default function DashboardPage() {
                 <Link
                   key={i}
                   href={w.href}
-                  className="group block p-4 sm:p-5 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:border-[#2B5FC7] dark:hover:border-[#3B6FE0] transition-all"
+                  className="group block p-3 sm:p-5 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:border-[#2B5FC7] dark:hover:border-[#3B6FE0] transition-all"
                 >
                   {cardContent}
                 </Link>
               ) : (
                 <div
                   key={i}
-                  className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none transition-colors"
+                  className="p-3 sm:p-5 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none transition-colors"
                 >
                   {cardContent}
                 </div>
@@ -438,10 +438,10 @@ export default function DashboardPage() {
                 </div>
               </div>
               <Link
-                href="/dashboard/reports"
+                href="/dashboard/reports/orders"
                 className="w-full py-2 px-3 rounded-lg bg-[#EFF4FE] hover:bg-[#D6E3FC] dark:bg-[#1D4ED8]/25 text-[#2B5FC7] dark:text-[#93C5FD] text-xs font-semibold text-center transition-colors block"
               >
-                Buka Rincian Arus Kas & Pengeluaran →
+                Buka Rincian Laporan Order & Profit →
               </Link>
             </div>
 
@@ -472,10 +472,10 @@ export default function DashboardPage() {
                 </div>
               </div>
               <Link
-                href="/dashboard/reports"
+                href="/dashboard/reports/orders"
                 className="w-full py-2 px-3 rounded-lg bg-[#F4F6FA] hover:bg-[#E2E6ED]/60 dark:bg-[#1B2A44] text-[#1B2436] dark:text-[#E8ECF3] border border-[#E2E6ED] dark:border-[#26334D] text-xs font-semibold text-center transition-colors block"
               >
-                Lihat Rekap Penjualan per Brand →
+                Lihat Laporan Order per Brand →
               </Link>
             </div>
 
@@ -506,10 +506,10 @@ export default function DashboardPage() {
                 </div>
               </div>
               <Link
-                href="/dashboard/reports"
+                href="/dashboard/reports/stock-mutation"
                 className="w-full py-2 px-3 rounded-lg bg-[#F4F6FA] hover:bg-[#E2E6ED]/60 dark:bg-[#1B2A44] text-[#1B2436] dark:text-[#E8ECF3] border border-[#E2E6ED] dark:border-[#26334D] text-xs font-semibold text-center transition-colors block"
               >
-                Lihat Rekap Mutasi & Stok Gudang →
+                Lihat Laporan Mutasi Stock →
               </Link>
             </div>
           </section>

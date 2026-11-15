@@ -725,12 +725,23 @@ export function renderNavIcon(id: string, className?: string, size = 16) {
     case "invoices":
       return <IconInvoice size={size} className={className} />;
     case "reports":
+    case "report-stock-mutation":
       return <IconReport size={size} className={className} />;
+    case "report-stock-opname":
+      return <IconClipboardCheck size={size} className={className} />;
+    case "report-material-brand":
+      return <IconLayers size={size} className={className} />;
+    case "report-orders":
+      return <IconOrders size={size} className={className} />;
+    case "report-production":
+      return <IconProduction size={size} className={className} />;
+    case "report-qc":
+      return <IconQc size={size} className={className} />;
     case "audit":
       return <IconAudit size={size} className={className} />;
     case "users":
       return <IconUsers size={size} className={className} />;
-    // --- Staf Gudang ---
+    // --- Staf Gudang & Master ---
     case "inv-products":
       return <IconBox size={size} className={className} />;
     case "inv-materials":
@@ -740,6 +751,9 @@ export function renderNavIcon(id: string, className?: string, size = 16) {
     case "customers":
     case "master-customers":
       return <IconUsers size={size} className={className} />;
+    case "pic":
+    case "master-pic":
+      return <IconUser size={size} className={className} />;
     case "vendors":
     case "master-vendors":
       return <IconProduction size={size} className={className} />;

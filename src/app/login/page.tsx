@@ -128,15 +128,15 @@ export default function LoginPage() {
         <div className="lg:col-span-5 hidden lg:flex flex-col justify-between p-6 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none">
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <div className="h-10 w-10 rounded-lg bg-[#2B5FC7] dark:bg-[#3B6FE0] flex items-center justify-center font-bold text-white text-base shadow-sm">
-                PS
+              <div className="h-10 w-10 rounded-lg bg-[#2B5FC7] dark:bg-[#3B6FE0] flex items-center justify-center font-bold text-white text-sm shadow-sm">
+                ERP
               </div>
               <div>
                 <div className="font-bold text-[#1B2436] dark:text-[#E8ECF3] text-sm leading-tight">
-                  CV Solusi Inovasi Packaging
+                  MINI ERP
                 </div>
                 <div className="text-xs text-[#2B5FC7] dark:text-[#3B6FE0] font-medium">
-                  Sistem ERP / CRM Percetakan
+                  CV Solusi Inovasi Packaging
                 </div>
               </div>
             </div>
@@ -212,12 +212,12 @@ export default function LoginPage() {
         <div className="lg:col-span-7 flex flex-col justify-center p-6 sm:p-8 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none">
           {/* Mobile Brand Monogram */}
           <div className="flex lg:hidden items-center gap-3 mb-5 pb-4 border-b border-[#E2E6ED] dark:border-[#26334D]">
-            <div className="h-9 w-9 rounded-lg bg-[#2B5FC7] dark:bg-[#3B6FE0] flex items-center justify-center font-bold text-white text-sm">
-              PS
+            <div className="h-9 w-9 rounded-lg bg-[#2B5FC7] dark:bg-[#3B6FE0] flex items-center justify-center font-bold text-white text-xs">
+              ERP
             </div>
             <div>
               <div className="font-bold text-[#1B2436] dark:text-[#E8ECF3] text-sm">
-                Packsolution ERP / CRM
+                MINI ERP
               </div>
               <div className="text-xs text-[#2B5FC7] dark:text-[#3B6FE0]">
                 CV Solusi Inovasi Packaging

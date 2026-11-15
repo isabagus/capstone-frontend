@@ -15,6 +15,7 @@ export const ROUTES = {
   "transaction.opname": "/dashboard/transaction/opname",
   "master.customers": "/dashboard/master/customers",
   "master.vendors": "/dashboard/master/vendors",
+  "master.pic": "/dashboard/master/pic",
   "master.suppliers": "/dashboard/master/suppliers",
   "master.brands": "/dashboard/master/brands",
   "master.warehouses": "/dashboard/master/warehouses",
@@ -23,6 +24,12 @@ export const ROUTES = {
   "category.materials": "/dashboard/category/materials",
   "category.spareparts": "/dashboard/category/spareparts",
   "category.products": "/dashboard/category/products",
+  "report.stockMutation": "/dashboard/reports/stock-mutation",
+  "report.stockOpname": "/dashboard/reports/stock-opname",
+  "report.materialByBrand": "/dashboard/reports/material-by-brand",
+  "report.orders": "/dashboard/reports/orders",
+  "report.production": "/dashboard/reports/production",
+  "report.qc": "/dashboard/reports/qc",
 } as const;
 
 export type RouteName = keyof typeof ROUTES;

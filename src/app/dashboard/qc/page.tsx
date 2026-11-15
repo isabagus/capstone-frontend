@@ -205,7 +205,7 @@ export default function QualityControlPage() {
         </div>
 
         {/* 4 Cards Summary */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
           <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none transition-colors">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-[#6B7684] dark:text-[#8A94A6]">Antrean Inspeksi Hari Ini</span>

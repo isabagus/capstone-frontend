@@ -5,7 +5,12 @@ import Link from "next/link";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBrands, useProducts } from "@/hooks/useInventoryData";
-import { useCustomerMaster } from "@/services/partnerMasterStore";
+import {
+  useCustomerMaster,
+  calculatePriorityFromDeadline,
+  getTodayIsoDate,
+  getFutureIsoDate,
+} from "@/services/partnerMasterStore";
 import {
   IconOrders,
   IconTag,
@@ -61,13 +66,13 @@ const INITIAL_ORDERS: OrderItem[] = [
     finishing: ["Laminasi Doff", "Foil Hot Print Gold", "Die-cut"],
     stockPreValidation: "Tersedia",
     priority: "Express",
-    deadline: "25 Sep 2026 (18:00 WIB)",
-    orderDate: "24 Sep 2026",
+    deadline: getFutureIsoDate(1),
+    orderDate: getTodayIsoDate(),
     status: "Queued for Design",
     revisionCount: 2,
     revisionHistory: [
-      { revNumber: 1, date: "24 Sep 2026 10:00", notes: "Ubah posisi logo 2cm ke kanan" },
-      { revNumber: 2, date: "24 Sep 2026 14:30", notes: "Penyesuaian warna foil ke Gold Shiny #4" },
+      { revNumber: 1, date: "10:00 WIB", notes: "Ubah posisi logo 2cm ke kanan" },
+      { revNumber: 2, date: "14:30 WIB", notes: "Penyesuaian warna foil ke Gold Shiny #4" },
     ],
     notes: "Pesanan express untuk launching produk minggu ini.",
   },
@@ -84,12 +89,12 @@ const INITIAL_ORDERS: OrderItem[] = [
     finishing: ["Laminasi Doff", "Emboss Logo"],
     stockPreValidation: "Tersedia",
     priority: "High",
-    deadline: "28 Sep 2026",
-    orderDate: "24 Sep 2026",
+    deadline: getFutureIsoDate(4),
+    orderDate: getTodayIsoDate(),
     status: "Order Placed",
     revisionCount: 1,
     revisionHistory: [
-      { revNumber: 1, date: "24 Sep 2026 11:20", notes: "Tambahkan QR Code BPOM pada sisi samping" },
+      { revNumber: 1, date: "11:20 WIB", notes: "Tambahkan QR Code BPOM pada sisi samping" },
     ],
     notes: "Warna kraft natural dengan tinta putih pekat.",
   },
@@ -106,15 +111,15 @@ const INITIAL_ORDERS: OrderItem[] = [
     finishing: ["Foil Hot Print Gold", "Spot UV"],
     stockPreValidation: "Tersedia",
     priority: "Normal",
-    deadline: "30 Sep 2026",
-    orderDate: "23 Sep 2026",
+    deadline: getFutureIsoDate(7),
+    orderDate: getTodayIsoDate(),
     status: "Design Approved",
     revisionCount: 4,
     revisionHistory: [
-      { revNumber: 1, date: "23 Sep 09:00", notes: "Koreksi font tulisan wedding" },
-      { revNumber: 2, date: "23 Sep 13:00", notes: "Ubah background dari krem ke broken white" },
-      { revNumber: 3, date: "23 Sep 16:30", notes: "Perbesar motif bunga di pojok kanan bawah" },
-      { revNumber: 4, date: "24 Sep 09:15", notes: "Revisi final: penyesuaian margin amplop" },
+      { revNumber: 1, date: "09:00 WIB", notes: "Koreksi font tulisan wedding" },
+      { revNumber: 2, date: "13:00 WIB", notes: "Ubah background dari krem ke broken white" },
+      { revNumber: 3, date: "16:30 WIB", notes: "Perbesar motif bunga di pojok kanan bawah" },
+      { revNumber: 4, date: "09:15 WIB", notes: "Revisi final: penyesuaian margin amplop" },
     ],
     notes: "Mencapai batas 4x revisi desain. Desain telah di-ACC final.",
   },
@@ -130,9 +135,9 @@ const INITIAL_ORDERS: OrderItem[] = [
     quantity: 350,
     finishing: ["Laminasi Doff", "Hardcover Board"],
     stockPreValidation: "Tersedia",
-    priority: "High",
-    deadline: "27 Sep 2026",
-    orderDate: "23 Sep 2026",
+    priority: "Express",
+    deadline: getFutureIsoDate(2),
+    orderDate: getTodayIsoDate(),
     status: "Queued for Design",
     revisionCount: 0,
     revisionHistory: [],
@@ -151,8 +156,8 @@ const INITIAL_ORDERS: OrderItem[] = [
     finishing: ["Laminasi Glossy", "Ziplock Sealing"],
     stockPreValidation: "Menipis",
     priority: "Normal",
-    deadline: "05 Okt 2026",
-    orderDate: "22 Sep 2026",
+    deadline: getFutureIsoDate(10),
+    orderDate: getTodayIsoDate(),
     status: "Order Placed",
     revisionCount: 1,
     revisionHistory: [
@@ -193,6 +198,9 @@ export default function OrdersPage() {
   const [newCustomerPic, setNewCustomerPic] = useState<string>("");
   const [newCustomerAddress, setNewCustomerAddress] = useState<string>("");
 
+  const [deadlineError, setDeadlineError] = useState<string | null>(null);
+  const todayIso = getTodayIsoDate();
+
   const [newOrderData, setNewOrderData] = useState({
     customerName: "",
     customerPhone: "",
@@ -202,8 +210,7 @@ export default function OrdersPage() {
     paperType: "Kertas Ivory 300 GSM Plano (79 x 109 cm)",
     quantity: 1000,
     finishing: ["Laminasi Doff"],
-    priority: "Normal" as OrderItem["priority"],
-    deadline: "",
+    deadline: getFutureIsoDate(3),
     notes: "",
   });
 
@@ -217,27 +224,38 @@ export default function OrdersPage() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Filtered orders
-  const filteredOrders = orders.filter((o) => {
-    if (selectedBrand !== "Semua" && o.brand.toLowerCase() !== selectedBrand.toLowerCase()) return false;
-    if (selectedStatus !== "Semua" && o.status !== selectedStatus) return false;
-    if (selectedPriority !== "Semua" && o.priority !== selectedPriority) return false;
-    if (
-      searchQuery &&
-      !o.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !o.productName.toLowerCase().includes(searchQuery.toLowerCase())
-    ) {
-      return false;
-    }
-    return true;
+  // Hitung prioritas otomatis dari deadline dan urutkan berdasar deadline paling mepet (ascending)
+  const ordersWithComputedPriority = orders.map((o) => {
+    const pInfo = calculatePriorityFromDeadline(o.deadline);
+    return {
+      ...o,
+      priority: pInfo.priority,
+      deadlineInfo: pInfo,
+    };
   });
 
+  const filteredOrders = ordersWithComputedPriority
+    .filter((o) => {
+      if (selectedBrand !== "Semua" && o.brand.toLowerCase() !== selectedBrand.toLowerCase()) return false;
+      if (selectedStatus !== "Semua" && o.status !== selectedStatus) return false;
+      if (selectedPriority !== "Semua" && o.priority !== selectedPriority) return false;
+      if (
+        searchQuery &&
+        !o.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !o.productName.toLowerCase().includes(searchQuery.toLowerCase())
+      ) {
+        return false;
+      }
+      return true;
+    })
+    .sort((a, b) => a.deadline.localeCompare(b.deadline));
+
   // Calculations
-  const totalOrders = orders.length;
-  const queuedForDesign = orders.filter((o) => o.status === "Queued for Design").length;
-  const expressOrders = orders.filter((o) => o.priority === "Express").length;
-  const maxRevisionOrders = orders.filter((o) => o.revisionCount >= 4).length;
+  const totalOrders = ordersWithComputedPriority.length;
+  const queuedForDesign = ordersWithComputedPriority.filter((o) => o.status === "Queued for Design").length;
+  const expressOrders = ordersWithComputedPriority.filter((o) => o.priority === "Express").length;
+  const maxRevisionOrders = ordersWithComputedPriority.filter((o) => o.revisionCount >= 4).length;
 
   // Helper for priority badges
   const renderPriorityBadge = (priority: OrderItem["priority"]) => {
@@ -350,7 +368,7 @@ export default function OrdersPage() {
         </div>
 
         {/* Operational Metric Cards (4 Cards) */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
           {/* Card 1: Total Order */}
           <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none transition-colors">
             <div className="flex items-center justify-between mb-2">
@@ -631,11 +649,14 @@ export default function OrdersPage() {
                         )}
                       </td>
 
-                      {/* Prioritas & Deadline */}
+                      {/* Prioritas Otomatis & Deadline */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         <div>{renderPriorityBadge(o.priority)}</div>
-                        <div className="text-[10px] text-[#6B7684] dark:text-[#8A94A6] mt-0.5 font-mono">
-                          {o.deadline}
+                        <div className="text-[10px] text-[#1B2436] dark:text-[#E8ECF3] mt-0.5 font-mono font-semibold">
+                          📅 {o.deadlineInfo.formattedDeadline}
+                        </div>
+                        <div className="text-[10px] text-[#991B1B] dark:text-[#F87171] font-medium">
+                          ⏳ {o.deadlineInfo.countdownLabel}
                         </div>
                       </td>
 
@@ -1109,72 +1130,94 @@ export default function OrdersPage() {
                 </div>
               )}
 
-              {/* Step 3: Upload & Priority Deadline */}
-              {formStep === 3 && (
-                <div className="space-y-3 text-xs">
-                  <div>
-                    <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
-                      Tingkat Prioritas Pengerjaan
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(["Normal", "High", "Express"] as OrderItem["priority"][]).map((p) => (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => setNewOrderData({ ...newOrderData, priority: p })}
-                          className={`p-2.5 rounded-lg border text-center font-medium transition-colors ${
-                            newOrderData.priority === p
-                              ? p === "Express"
-                                ? "bg-[#991B1B] text-white border-[#991B1B] dark:bg-[#F87171] dark:text-black font-bold"
-                                : "bg-[#2B5FC7] text-white border-[#2B5FC7] dark:bg-[#3B6FE0]"
-                              : "bg-[#F4F6FA] dark:bg-[#0F1B2D] border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
-                          }`}
-                        >
-                          {p === "Express" ? "⚡ Express (<24 Jam)" : p}
-                        </button>
-                      ))}
+              {/* Step 3: Deadline Wajib (Tipe Tanggal) & Prioritas Otomatis */}
+              {formStep === 3 && (() => {
+                const livePriority = calculatePriorityFromDeadline(newOrderData.deadline);
+                return (
+                  <div className="space-y-3.5 text-xs">
+                    <div>
+                      <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
+                        Tanggal Batas Waktu Pengiriman (Deadline) *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        min={todayIso}
+                        value={newOrderData.deadline}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setNewOrderData({ ...newOrderData, deadline: val });
+                          if (!val) {
+                            setDeadlineError("Tanggal deadline wajib diisi.");
+                          } else if (val < todayIso) {
+                            setDeadlineError("Tanggal deadline tidak boleh tanggal yang sudah lewat.");
+                          } else {
+                            setDeadlineError(null);
+                          }
+                        }}
+                        className={`w-full h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border text-[#1B2436] dark:text-[#E8ECF3] font-mono ${
+                          deadlineError
+                            ? "border-[#991B1B] focus:border-[#991B1B]"
+                            : "border-[#E2E6ED] dark:border-[#26334D] focus:border-[#2B5FC7]"
+                        }`}
+                      />
+                      {deadlineError ? (
+                        <div className="text-[11px] text-[#991B1B] dark:text-[#F87171] font-medium mt-1">
+                          ⚠️ {deadlineError}
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-[#6B7684] dark:text-[#8A94A6] mt-1">
+                          Minimal tanggal hari ini ({todayIso}). Prioritas pengerjaan dihitung otomatis oleh sistem dari sisa waktu menuju deadline.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Preview Prioritas Otomatis Berdasarkan Sisa Waktu Menuju Deadline */}
+                    <div className="p-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-[#1B2436] dark:text-[#E8ECF3]">
+                          Prioritas Otomatis (Berdasarkan Sisa Waktu):
+                        </div>
+                        <div className="text-[10px] text-[#6B7684] dark:text-[#8A94A6] mt-0.5">
+                          ≤ 2 Hari: <strong>Express</strong> · 3–5 Hari: <strong>High</strong> · &gt; 5 Hari: <strong>Normal</strong>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        {renderPriorityBadge(livePriority.priority)}
+                        <div className="text-[10px] font-mono text-[#6B7684] dark:text-[#8A94A6] mt-1">
+                          {livePriority.countdownLabel}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
+                        Upload File Desain Awal Pelanggan
+                      </label>
+                      <div className="p-4 border-2 border-dashed border-[#E2E6ED] dark:border-[#26334D] rounded-lg text-center bg-[#F4F6FA]/50 dark:bg-[#0F1B2D]/50">
+                        <div className="text-xs text-[#2B5FC7] dark:text-[#3B6FE0] font-semibold">
+                          Pilih file PDF / AI / ZIP
+                        </div>
+                        <div className="text-[10px] text-[#6B7684] dark:text-[#8A94A6] mt-0.5">
+                          Maksimal ukuran file 100MB
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
+                        Catatan Tambahan untuk Tim Desain / Finishing
+                      </label>
+                      <input
+                        placeholder="Contoh: Mohon perhatikan kerapian lem hotmelt"
+                        value={newOrderData.notes}
+                        onChange={(e) => setNewOrderData({ ...newOrderData, notes: e.target.value })}
+                        className="w-full h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
+                      />
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
-                      Batas Waktu Pengiriman (Deadline)
-                    </label>
-                    <input
-                      placeholder="Contoh: 28 Sep 2026, 17:00 WIB"
-                      value={newOrderData.deadline}
-                      onChange={(e) => setNewOrderData({ ...newOrderData, deadline: e.target.value })}
-                      className="w-full h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
-                      Upload File Desain Awal Pelanggan
-                    </label>
-                    <div className="p-4 border-2 border-dashed border-[#E2E6ED] dark:border-[#26334D] rounded-lg text-center bg-[#F4F6FA]/50 dark:bg-[#0F1B2D]/50">
-                      <div className="text-xs text-[#2B5FC7] dark:text-[#3B6FE0] font-semibold">
-                        Pilih file PDF / AI / ZIP
-                      </div>
-                      <div className="text-[10px] text-[#6B7684] dark:text-[#8A94A6] mt-0.5">
-                        Maksimal ukuran file 100MB
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
-                      Catatan Tambahan untuk Tim Desain / Finishing
-                    </label>
-                    <input
-                      placeholder="Contoh: Mohon perhatikan kerapian lem hotmelt"
-                      value={newOrderData.notes}
-                      onChange={(e) => setNewOrderData({ ...newOrderData, notes: e.target.value })}
-                      className="w-full h-9 px-3 rounded-lg bg-[#F4F6FA] dark:bg-[#0F1B2D] border border-[#E2E6ED] dark:border-[#26334D] text-[#1B2436] dark:text-[#E8ECF3]"
-                    />
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Navigation buttons */}
               <div className="flex items-center justify-between pt-3 border-t border-[#E2E6ED] dark:border-[#26334D]">
@@ -1212,6 +1255,15 @@ export default function OrdersPage() {
                   <button
                     type="button"
                     onClick={() => {
+                      if (!newOrderData.deadline) {
+                        setDeadlineError("Tanggal deadline wajib diisi.");
+                        return;
+                      }
+                      if (newOrderData.deadline < todayIso) {
+                        setDeadlineError("Tanggal deadline tidak boleh tanggal yang sudah lewat.");
+                        return;
+                      }
+                      const autoPriority = calculatePriorityFromDeadline(newOrderData.deadline).priority;
                       const isReadyStock = orderServiceType === "Beli Produk Jadi";
                       const newOrder: OrderItem = {
                         id: String(Date.now()),
@@ -1227,9 +1279,9 @@ export default function OrdersPage() {
                         quantity: newOrderData.quantity || 1000,
                         finishing: newOrderData.finishing,
                         stockPreValidation: "Tersedia",
-                        priority: newOrderData.priority,
-                        deadline: newOrderData.deadline || "30 Sep 2026",
-                        orderDate: "24 Sep 2026",
+                        priority: autoPriority,
+                        deadline: newOrderData.deadline,
+                        orderDate: todayIso,
                         status: isReadyStock ? "Siap Kirim (Ready Stock)" : "Order Placed",
                         revisionCount: 0,
                         revisionHistory: [],

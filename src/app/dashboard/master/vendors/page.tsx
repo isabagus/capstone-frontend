@@ -251,7 +251,7 @@ export default function VendorsMasterPage() {
         />
 
         {/* Summary Cards */}
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <section className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4">
           <div className="p-4 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D]">
             <div className="flex items-center justify-between text-xs text-[#6B7684] dark:text-[#8A94A6] mb-1">
               <span>Total Vendor Mitra Terdaftar</span>

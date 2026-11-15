@@ -17,8 +17,8 @@ interface StatCardProps {
 export default function StatCard({ title, value, icon, desc, change, changeType = "neutral", href, id }: StatCardProps) {
   const body = (
     <>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-[#6B7684] dark:text-[#8A94A6] flex items-center gap-1.5">
+      <div className="flex items-start justify-between gap-1.5 mb-1.5 sm:mb-2">
+        <span className="text-[11px] sm:text-xs font-medium text-[#6B7684] dark:text-[#8A94A6] flex items-center gap-1 leading-snug">
           {title}
           {href && (
             <span className="text-[#2B5FC7] dark:text-[#93B4F5] opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 transition-all" aria-hidden>
@@ -26,17 +26,17 @@ export default function StatCard({ title, value, icon, desc, change, changeType 
             </span>
           )}
         </span>
-        <span className="p-1.5 rounded-lg bg-[#F4F6FA] dark:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] flex items-center justify-center">
+        <span className="p-1 sm:p-1.5 rounded-lg bg-[#F4F6FA] dark:bg-[#1B2A44] border border-[#E2E6ED] dark:border-[#26334D] flex items-center justify-center shrink-0">
           {icon}
         </span>
       </div>
-      <div className="text-2xl font-bold text-[#1B2436] dark:text-[#E8ECF3] mb-1 tracking-tight">{value}</div>
-      <div className="flex items-center justify-between gap-2 text-xs pt-1 border-t border-[#E2E6ED]/60 dark:border-[#26334D]/60 mt-2">
-        <span className="text-[#6B7684] dark:text-[#8A94A6] text-[11px] truncate">{desc}</span>
+      <div className="text-lg sm:text-2xl font-bold text-[#1B2436] dark:text-[#E8ECF3] mb-1 tracking-tight">{value}</div>
+      <div className="flex flex-wrap items-center justify-between gap-1 text-xs pt-1 border-t border-[#E2E6ED]/60 dark:border-[#26334D]/60 mt-1.5 sm:mt-2">
+        <span className="text-[#6B7684] dark:text-[#8A94A6] text-[10px] sm:text-[11px] truncate">{desc}</span>
         {change && (
           <span
             className={cx(
-              "text-[11px] font-medium px-1.5 py-0.5 rounded whitespace-nowrap",
+              "text-[10px] sm:text-[11px] font-medium px-1.5 py-0.5 rounded whitespace-nowrap",
               changeType === "positive"
                 ? "bg-[#ECFDF5] text-[#065F46] dark:bg-[#064E3B]/30 dark:text-[#34D399]"
                 : changeType === "negative"
@@ -51,7 +51,7 @@ export default function StatCard({ title, value, icon, desc, change, changeType 
     </>
   );
 
-  const cls = cx(card, "relative block p-4 sm:p-5");
+  const cls = cx(card, "relative block p-3 sm:p-5");
 
   if (href) {
     return (

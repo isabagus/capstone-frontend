@@ -48,7 +48,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
           <div className="min-w-0">
             <div className="font-bold text-[#1B2436] dark:text-[#E8ECF3] text-sm truncate leading-tight tracking-tight">
-              ERP Percetakan
+              MINI ERP
             </div>
             <div className="text-[11px] font-medium text-[#2B5FC7] dark:text-[#3B6FE0]">
               CV Solusi Inovasi Packaging

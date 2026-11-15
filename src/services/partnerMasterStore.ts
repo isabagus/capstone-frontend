@@ -44,8 +44,118 @@ export interface VendorMasterItem {
   active: boolean;
 }
 
+export type PicDivision =
+  | "Cetak Offset"
+  | "Pond & Die-Cut"
+  | "Laminasi & Foil"
+  | "Finishing & Lem"
+  | "Subkontrak Vendor";
+
+export interface ProductionPicMasterItem {
+  id: string;
+  code: string;
+  name: string;
+  roleTitle: string;
+  division: PicDivision;
+  defaultMachine: string;
+  shift: "Shift Pagi" | "Shift Siang" | "Reguler";
+  phone: string;
+  activeJobs: number;
+  active: boolean;
+}
+
+export type AutoPriorityLevel = "Express" | "High" | "Normal";
+
+export interface DeadlinePriorityInfo {
+  priority: AutoPriorityLevel;
+  daysRemaining: number;
+  hoursRemaining: number;
+  formattedDeadline: string;
+  countdownLabel: string;
+}
+
+/**
+ * Menghitung tingkat prioritas secara otomatis berdasarkan selisih waktu menuju tanggal deadline:
+ * - <= 2 hari (<= 48 jam) : Express
+ * - 3 s/d 5 hari          : High
+ * - > 5 hari              : Normal
+ */
+export function calculatePriorityFromDeadline(
+  deadlineIso: string,
+  referenceDateStr?: string
+): DeadlinePriorityInfo {
+  const now = referenceDateStr ? new Date(referenceDateStr) : new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const parsed = new Date(deadlineIso);
+  if (Number.isNaN(parsed.getTime())) {
+    return {
+      priority: "Normal",
+      daysRemaining: 7,
+      hoursRemaining: 168,
+      formattedDeadline: deadlineIso || "-",
+      countdownLabel: "7 hari lagi",
+    };
+  }
+
+  const targetDate = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  const diffMs = targetDate.getTime() - todayStart.getTime();
+  const daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const hoursRemaining = Math.max(0, daysRemaining * 24);
+
+  let priority: AutoPriorityLevel = "Normal";
+  if (daysRemaining <= 2) {
+    priority = "Express";
+  } else if (daysRemaining <= 5) {
+    priority = "High";
+  }
+
+  const formattedDeadline = targetDate.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  const countdownLabel =
+    daysRemaining < 0
+      ? `Terlewat ${Math.abs(daysRemaining)} hari`
+      : daysRemaining === 0
+      ? "Hari ini (Kritis <24 Jam)"
+      : daysRemaining === 1
+      ? "Besok (H-1)"
+      : `H-${daysRemaining} (${daysRemaining} hari lagi)`;
+
+  return {
+    priority,
+    daysRemaining,
+    hoursRemaining,
+    formattedDeadline,
+    countdownLabel,
+  };
+}
+
+/** Mengembalikan tanggal hari ini dalam format YYYY-MM-DD (waktu lokal) */
+export function getTodayIsoDate(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Mengembalikan tanggal H+offsetDays dari hari ini dalam format YYYY-MM-DD */
+export function getFutureIsoDate(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 const CUSTOMERS_STORAGE_KEY = "sip_master_customers_v1";
 const VENDORS_STORAGE_KEY = "sip_master_vendors_v1";
+const PICS_STORAGE_KEY = "sip_master_production_pics_v1";
 
 export const INITIAL_CUSTOMERS: CustomerMasterItem[] = [
   {
@@ -194,6 +304,81 @@ export const INITIAL_VENDORS: VendorMasterItem[] = [
   },
 ];
 
+export const INITIAL_PRODUCTION_PICS: ProductionPicMasterItem[] = [
+  {
+    id: "pic-1",
+    code: "PIC-001",
+    name: "Rudi Hartono",
+    roleTitle: "Kepala Produksi & Koordinator Mesin",
+    division: "Cetak Offset",
+    defaultMachine: "Heidelberg SM-74 (4 Warna)",
+    shift: "Shift Pagi",
+    phone: "0812-3000-1101",
+    activeJobs: 2,
+    active: true,
+  },
+  {
+    id: "pic-2",
+    code: "PIC-002",
+    name: "Joko Santoso",
+    roleTitle: "Operator Cetak Offset Senior A",
+    division: "Cetak Offset",
+    defaultMachine: "Heidelberg SM-52 / SM-74",
+    shift: "Shift Pagi",
+    phone: "0813-3000-1102",
+    activeJobs: 1,
+    active: true,
+  },
+  {
+    id: "pic-3",
+    code: "PIC-003",
+    name: "Bambang Supriyadi",
+    roleTitle: "Operator Cetak Offset Senior B",
+    division: "Cetak Offset",
+    defaultMachine: "Oliver 58 / Komori L-428",
+    shift: "Shift Siang",
+    phone: "0812-3000-1103",
+    activeJobs: 1,
+    active: true,
+  },
+  {
+    id: "pic-4",
+    code: "PIC-004",
+    name: "Ahmad Subagio",
+    roleTitle: "Teknisi Pond & Die-Cut Presisi",
+    division: "Pond & Die-Cut",
+    defaultMachine: "Mesin Pond & Die-Cut Bobst",
+    shift: "Shift Pagi",
+    phone: "0857-3000-1104",
+    activeJobs: 1,
+    active: true,
+  },
+  {
+    id: "pic-5",
+    code: "PIC-005",
+    name: "Slamet Riyadi",
+    roleTitle: "Teknisi Finishing, Laminasi & Lem",
+    division: "Finishing & Lem",
+    defaultMachine: "Mesin Pengeleman Hotmelt Otomatis",
+    shift: "Shift Pagi",
+    phone: "0815-3000-1105",
+    activeJobs: 2,
+    active: true,
+  },
+  {
+    id: "pic-6",
+    code: "PIC-006",
+    name: "Wahyu Pratama",
+    roleTitle: "PIC Pengawasan Subkontrak Vendor Mitra",
+    division: "Subkontrak Vendor",
+    defaultMachine: "Vendor Foil & Emboss Kurnia / Komori",
+    shift: "Reguler",
+    phone: "0811-3000-1106",
+    activeJobs: 1,
+    active: true,
+  },
+];
+
 export function loadCustomersFromStorage(): CustomerMasterItem[] {
   if (typeof window === "undefined") return INITIAL_CUSTOMERS;
   try {
@@ -274,5 +459,46 @@ export function useVendorMaster() {
   }, []);
 
   return { vendors, updateVendors };
+}
+
+export function loadProductionPicsFromStorage(): ProductionPicMasterItem[] {
+  if (typeof window === "undefined") return INITIAL_PRODUCTION_PICS;
+  try {
+    const raw = localStorage.getItem(PICS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return INITIAL_PRODUCTION_PICS;
+}
+
+export function saveProductionPicsToStorage(list: ProductionPicMasterItem[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(PICS_STORAGE_KEY, JSON.stringify(list));
+    window.dispatchEvent(new Event("sip-production-pics-updated"));
+  } catch {}
+}
+
+export function useProductionPicMaster() {
+  const [pics, setPics] = useState<ProductionPicMasterItem[]>(() => loadProductionPicsFromStorage());
+
+  useEffect(() => {
+    const sync = () => setPics(loadProductionPicsFromStorage());
+    window.addEventListener("sip-production-pics-updated", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("sip-production-pics-updated", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  const updatePics = useCallback((next: ProductionPicMasterItem[]) => {
+    setPics(next);
+    saveProductionPicsToStorage(next);
+  }, []);
+
+  return { pics, updatePics };
 }
 

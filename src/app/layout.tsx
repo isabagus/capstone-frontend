@@ -11,10 +11,15 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Packsolution ERP – CV Solusi Inovasi Packaging",
+  title: "MINI ERP – CV Solusi Inovasi Packaging",
   description:
-    "Sistem ERP/CRM terintegrasi untuk CV Solusi Inovasi Packaging. Manajemen inventori 5 brand, 2 gudang, BOM engine, Kanban produksi, dan prediksi kurs USD.",
-  keywords: ["ERP", "CRM", "inventori", "produksi", "percetakan", "packaging"],
+    "Sistem MINI ERP terintegrasi untuk CV Solusi Inovasi Packaging. Manajemen inventori 5 brand, 2 gudang, BOM engine, Kanban produksi, dan prediksi kurs USD.",
+  keywords: ["MINI ERP", "ERP", "CRM", "inventori", "produksi", "percetakan", "packaging"],
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
