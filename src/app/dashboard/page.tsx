@@ -44,16 +44,16 @@ interface StatWidget {
 
 const ROLE_WIDGETS: Record<string, StatWidget[]> = {
   owner: [
-    { title: "Total Brand Aktif", value: "5 Brand", desc: "Packsolution, Estella, dll", change: "Stabil", changeType: "neutral", iconKey: "tag" },
-    { title: "Kapasitas Gudang", value: "2 Unit", desc: "Gudang 1 & Gudang 2 Ruko", change: "84% terpakai", changeType: "neutral", iconKey: "warehouse" },
-    { title: "Efisiensi Produksi", value: "96.4%", desc: "Bulan berjalan", change: "+2.1%", changeType: "positive", iconKey: "gear" },
-    { title: "Valuasi Stok Material", value: "Rp 128.5 jt", desc: "Total 4 Kategori Bahan Baku", change: "+4.2%", changeType: "positive", iconKey: "invoice" },
+    { title: "Pemasukan Sebulan (Omzet)", value: "Rp 136,5 Jt", desc: "Jasa Cetak + Produk Jadi", change: "+12.4%", changeType: "positive", iconKey: "invoice", href: "/dashboard/reports" },
+    { title: "Pengeluaran Sebulan", value: "Rp 94,7 Jt", desc: "Bahan Supplier, Maklon & Mesin", change: "Terkendali", changeType: "neutral", iconKey: "orders", href: "/dashboard/reports" },
+    { title: "Profit Bersih Sebulan", value: "+Rp 41,8 Jt", desc: "Net Margin 30.6% bulan ini", change: "+14.2%", changeType: "positive", iconKey: "check", href: "/dashboard/reports" },
+    { title: "Valuasi Stok Gudang", value: "Rp 115,6 Jt", desc: "Gudang 1 (Pabrik) & Gudang 2", change: "2 Gudang Aktif", changeType: "positive", iconKey: "warehouse", href: "/dashboard/reports" },
   ],
   manager: [
-    { title: "Antrean Pesanan", value: "18 SPK", desc: "Sedang dalam alur pengerjaan", change: "+4 baru", changeType: "positive", iconKey: "orders" },
-    { title: "Peringatan Ambang (ROP)", value: "3 Bahan", desc: "Perlu reorder segera", change: "Kritis", changeType: "negative", iconKey: "alert" },
-    { title: "Estimasi Kurs USD", value: "Rp 15.820", desc: "Update Bank Indonesia", change: "-0.15%", changeType: "positive", iconKey: "usd" },
-    { title: "Faktur Siap Terbit", value: "7 Invoice", desc: "Setelah QC Pass", change: "Rp 42.8 jt", changeType: "positive", iconKey: "invoice" },
+    { title: "Pemasukan Sebulan (Omzet)", value: "Rp 136,5 Jt", desc: "Jasa Cetak + Produk Jadi", change: "+12.4%", changeType: "positive", iconKey: "invoice", href: "/dashboard/reports" },
+    { title: "Pengeluaran Sebulan", value: "Rp 94,7 Jt", desc: "Bahan Supplier, Maklon & Mesin", change: "Terkendali", changeType: "neutral", iconKey: "orders", href: "/dashboard/reports" },
+    { title: "Profit Bersih Sebulan", value: "+Rp 41,8 Jt", desc: "Net Margin 30.6% bulan ini", change: "+14.2%", changeType: "positive", iconKey: "check", href: "/dashboard/reports" },
+    { title: "Peringatan Ambang (ROP)", value: "3 Bahan", desc: "Perlu reorder ke Supplier", change: "Cek Gudang", changeType: "negative", iconKey: "alert", href: "/dashboard/inventory/materials" },
   ],
   front_office: [
     { title: "Pesanan Masuk Hari Ini", value: "12 Order", desc: "5 Brand terintegrasi", change: "+3 express", changeType: "positive", iconKey: "orders" },
@@ -407,6 +407,113 @@ export default function DashboardPage() {
             })}
           </div>
         </section>
+
+        {/* Manager & Owner: Ringkasan Eksekutif Keuangan Bulanan, Rekap Penjualan & Rekap Gudang */}
+        {(normalizedRole === "manager" || normalizedRole === "owner") && (
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* 1. Ringkasan Arus Kas & Profit Sebulan */}
+            <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-sm flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#2B5FC7] dark:text-[#60A5FA]">
+                    Keuangan Pabrik Bulan Ini
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#ECFDF5] text-[#059669] dark:bg-[#064E3B]/40 dark:text-[#34D399]">
+                    Profit +30.6%
+                  </span>
+                </div>
+                <div className="space-y-2 text-xs pt-1">
+                  <div className="flex justify-between py-1 border-b border-[#E2E6ED]/60 dark:border-[#26334D]/60">
+                    <span className="text-[#6B7684] dark:text-[#8A94A6]">Pemasukan Sebulan (Omzet):</span>
+                    <span className="font-mono font-bold text-[#2B5FC7] dark:text-[#60A5FA]">Rp 136.500.000</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-[#E2E6ED]/60 dark:border-[#26334D]/60">
+                    <span className="text-[#6B7684] dark:text-[#8A94A6]">Pengeluaran Sebulan (Biaya):</span>
+                    <span className="font-mono font-bold text-[#991B1B] dark:text-[#F87171]">-Rp 94.700.000</span>
+                  </div>
+                  <div className="flex justify-between pt-1 text-sm font-bold">
+                    <span className="text-[#1B2436] dark:text-[#E8ECF3]">Profit Bersih Sebulan:</span>
+                    <span className="font-mono text-[#059669] dark:text-[#34D399]">+Rp 41.800.000</span>
+                  </div>
+                </div>
+              </div>
+              <Link
+                href="/dashboard/reports"
+                className="w-full py-2 px-3 rounded-lg bg-[#EFF4FE] hover:bg-[#D6E3FC] dark:bg-[#1D4ED8]/25 text-[#2B5FC7] dark:text-[#93C5FD] text-xs font-semibold text-center transition-colors block"
+              >
+                Buka Rincian Arus Kas & Pengeluaran →
+              </Link>
+            </div>
+
+            {/* 2. Rekap Laporan Penjualan Sebulan */}
+            <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-sm flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#1B2436] dark:text-[#E8ECF3]">
+                    Rekap Laporan Penjualan
+                  </span>
+                  <span className="text-[11px] font-semibold text-[#6B7684] dark:text-[#8A94A6]">
+                    5 Brand Aktif
+                  </span>
+                </div>
+                <div className="space-y-2 text-xs pt-1">
+                  <div className="flex justify-between py-1 border-b border-[#E2E6ED]/60 dark:border-[#26334D]/60">
+                    <span className="text-[#6B7684] dark:text-[#8A94A6]">🖨️ Jasa Cetak Custom (Make-to-Order):</span>
+                    <span className="font-mono font-semibold text-[#1B2436] dark:text-[#E8ECF3]">Rp 108.200.000</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-[#E2E6ED]/60 dark:border-[#26334D]/60">
+                    <span className="text-[#6B7684] dark:text-[#8A94A6]">📦 Penjualan Produk Jadi (Ready Stock):</span>
+                    <span className="font-mono font-semibold text-[#1B2436] dark:text-[#E8ECF3]">Rp 28.300.000</span>
+                  </div>
+                  <div className="flex justify-between pt-1 text-xs">
+                    <span className="text-[#6B7684] dark:text-[#8A94A6]">Komposisi Pelanggan:</span>
+                    <span className="font-semibold text-[#059669] dark:text-[#34D399]">78% Repeat · 22% Baru</span>
+                  </div>
+                </div>
+              </div>
+              <Link
+                href="/dashboard/reports"
+                className="w-full py-2 px-3 rounded-lg bg-[#F4F6FA] hover:bg-[#E2E6ED]/60 dark:bg-[#1B2A44] text-[#1B2436] dark:text-[#E8ECF3] border border-[#E2E6ED] dark:border-[#26334D] text-xs font-semibold text-center transition-colors block"
+              >
+                Lihat Rekap Penjualan per Brand →
+              </Link>
+            </div>
+
+            {/* 3. Rekap Laporan Gudang & Mutasi Stok */}
+            <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] shadow-sm flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#1B2436] dark:text-[#E8ECF3]">
+                    Rekap Laporan Gudang
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FEF2F2] text-[#991B1B] dark:bg-[#7F1D1D]/40 dark:text-[#F87171]">
+                    3 Bahan &lt; ROP
+                  </span>
+                </div>
+                <div className="space-y-2 text-xs pt-1">
+                  <div className="flex justify-between py-1 border-b border-[#E2E6ED]/60 dark:border-[#26334D]/60">
+                    <span className="text-[#6B7684] dark:text-[#8A94A6]">Stok Gudang 1 (Pabrik Utama):</span>
+                    <span className="font-mono font-semibold text-[#1B2436] dark:text-[#E8ECF3]">Rp 81.560.000</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-[#E2E6ED]/60 dark:border-[#26334D]/60">
+                    <span className="text-[#6B7684] dark:text-[#8A94A6]">Stok Gudang 2 (Ruko Transit):</span>
+                    <span className="font-mono font-semibold text-[#1B2436] dark:text-[#E8ECF3]">Rp 34.105.000</span>
+                  </div>
+                  <div className="flex justify-between pt-1 text-xs">
+                    <span className="text-[#6B7684] dark:text-[#8A94A6]">Mutasi Bulan Ini:</span>
+                    <span className="font-semibold text-[#2B5FC7] dark:text-[#60A5FA]">114 Masuk · 84 Keluar</span>
+                  </div>
+                </div>
+              </div>
+              <Link
+                href="/dashboard/reports"
+                className="w-full py-2 px-3 rounded-lg bg-[#F4F6FA] hover:bg-[#E2E6ED]/60 dark:bg-[#1B2A44] text-[#1B2436] dark:text-[#E8ECF3] border border-[#E2E6ED] dark:border-[#26334D] text-xs font-semibold text-center transition-colors block"
+              >
+                Lihat Rekap Mutasi & Stok Gudang →
+              </Link>
+            </div>
+          </section>
+        )}
 
         {/* Staf Gudang: Panel Peringatan Stok & Antrean Produksi */}
         {isGudang && (

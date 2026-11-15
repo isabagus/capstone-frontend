@@ -1,18 +1,9 @@
 import axios from "axios";
 
-const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
-
-const getBaseUrl = () => {
-  // Jika di browser (termasuk sub-path /nama-project via Nginx + Tailscale Funnel),
-  // gunakan "${BASE_PATH}/api" agar otomatis diteruskan ke Laravel backend
-  if (typeof window !== "undefined") {
-    return `${BASE_PATH}/api`;
-  }
-  return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
-};
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 const apiClient = axios.create({
-  baseURL: getBaseUrl(),
+  baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -38,7 +29,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && typeof window !== "undefined") {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("auth_user");
-      window.location.href = `${BASE_PATH}/login`;
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   }
