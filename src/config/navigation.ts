@@ -47,6 +47,14 @@ export const NAV_ITEMS: NavItem[] = [
     permission: "order.view",
   },
   {
+    id: "master-customers",
+    label: "Master Pelanggan",
+    href: ROUTES["master.customers"],
+    icon: "customers",
+    roles: ["owner", "manager", "front_office"],
+    permission: null,
+  },
+  {
     id: "bom",
     label: "BOM Calculator",
     href: "/dashboard/bom",
@@ -61,6 +69,14 @@ export const NAV_ITEMS: NavItem[] = [
     icon: "📄",
     roles: ["owner", "manager", "tim_design", "kepala_produksi"],
     permission: "spk.view",
+  },
+  {
+    id: "master-vendors",
+    label: "Master Vendor Maklon",
+    href: ROUTES["master.vendors"],
+    icon: "vendors",
+    roles: ["owner", "manager", "tim_design", "kepala_produksi"],
+    permission: null,
   },
   {
     id: "production",
@@ -121,12 +137,71 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 // =====================================================================
-// Menu berkelompok khusus per role. Role yang terdaftar di sini memakai
-// struktur grup ini; role lain tetap memakai NAV_ITEMS (flat) di atas.
+// Menu berkelompok khusus per role.
+// Manager & Owner mendapatkan akses penuh ke seluruh fitur operasional,
+// inventori, transaksi mutasi, seluruh Master Data, serta Laporan & Analitik.
 // =====================================================================
 const SG = ["staf_gudang"];
+const MGR_OWN = ["manager", "owner"];
+
+const FULL_ACCESS_NAV_GROUPS: NavGroup[] = [
+  {
+    id: "main",
+    label: null,
+    items: [
+      { id: "dashboard", label: "Dashboard", href: ROUTES.dashboard, icon: "dashboard", roles: MGR_OWN, permission: null },
+    ],
+  },
+  {
+    id: "reports-analytics",
+    label: "Laporan & Manajerial",
+    items: [
+      { id: "reports", label: "Laporan Bisnis", href: "/dashboard/reports", icon: "reports", roles: MGR_OWN, permission: "report.view" },
+      { id: "usd-analytics", label: "Kurs USD & Harga", href: "/dashboard/usd-analytics", icon: "usd-analytics", roles: MGR_OWN, permission: "usd.view" },
+      { id: "invoices", label: "Invoice Penjualan", href: "/dashboard/invoices", icon: "invoices", roles: MGR_OWN, permission: "invoice.view" },
+      { id: "audit", label: "Audit Trail Forensik", href: "/dashboard/audit", icon: "audit", roles: MGR_OWN, permission: "audit.view" },
+      { id: "users", label: "Manajemen Pengguna", href: "/dashboard/users", icon: "users", roles: MGR_OWN, permission: "user.view" },
+    ],
+  },
+  {
+    id: "operational",
+    label: "Operasional & Produksi",
+    items: [
+      { id: "orders", label: "Order Pelanggan", href: "/dashboard/orders", icon: "orders", roles: MGR_OWN, permission: "order.view" },
+      { id: "bom", label: "BOM Calculator", href: "/dashboard/bom", icon: "bom", roles: MGR_OWN, permission: "bom.view" },
+      { id: "spk", label: "SPK Digital", href: "/dashboard/spk", icon: "spk", roles: MGR_OWN, permission: "spk.view" },
+      { id: "production", label: "Kanban Produksi", href: "/dashboard/production", icon: "production", roles: MGR_OWN, permission: "production.view" },
+      { id: "qc", label: "Quality Control", href: "/dashboard/qc", icon: "qc", roles: MGR_OWN, permission: "qc.inspect" },
+    ],
+  },
+  {
+    id: "inventory",
+    label: "Inventori & Transaksi",
+    items: [
+      { id: "inv-materials", label: "Bahan Baku", href: ROUTES["inventory.materials"], icon: "materials", roles: MGR_OWN, permission: "inventory.materials.view" },
+      { id: "inv-spareparts", label: "Sparepart", href: ROUTES["inventory.spareparts"], icon: "spareparts", roles: MGR_OWN, permission: "inventory.spareparts.view" },
+      { id: "inv-products", label: "Produk Jadi", href: ROUTES["inventory.products"], icon: "products", roles: MGR_OWN, permission: "inventory.products.view" },
+      { id: "trx-history", label: "Mutasi & Riwayat Stok", href: ROUTES["transaction.history"], icon: "trx-history", roles: MGR_OWN, permission: null },
+    ],
+  },
+  {
+    id: "master",
+    label: "Master Data",
+    items: [
+      { id: "master-customers", label: "Pelanggan (Klien)", href: ROUTES["master.customers"], icon: "customers", roles: MGR_OWN, permission: null },
+      { id: "master-vendors", label: "Vendor Mitra Maklon", href: ROUTES["master.vendors"], icon: "vendors", roles: MGR_OWN, permission: null },
+      { id: "master-suppliers", label: "Supplier Bahan", href: ROUTES["master.suppliers"], icon: "suppliers", roles: MGR_OWN, permission: "master.suppliers.view" },
+      { id: "master-brands", label: "Brand", href: ROUTES["master.brands"], icon: "brands", roles: MGR_OWN, permission: "master.brands.view" },
+      { id: "master-warehouses", label: "Gudang", href: ROUTES["master.warehouses"], icon: "warehouses", roles: MGR_OWN, permission: "master.warehouses.view" },
+      { id: "master-units", label: "Satuan & Konversi", href: ROUTES["master.units"], icon: "units", roles: MGR_OWN, permission: "master.units.view" },
+      { id: "master-categories", label: "Kategori", href: ROUTES["master.categories"], icon: "master-categories", roles: MGR_OWN, permission: null },
+    ],
+  },
+];
 
 export const ROLE_NAV_GROUPS: Record<string, NavGroup[]> = {
+  manager: FULL_ACCESS_NAV_GROUPS,
+  owner: FULL_ACCESS_NAV_GROUPS,
   staf_gudang: [
     {
       id: "main",

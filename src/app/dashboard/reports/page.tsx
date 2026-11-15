@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { useBrands } from "@/hooks/useInventoryData";
 import {
   IconReport,
   IconDownload,
@@ -13,11 +15,28 @@ import {
   IconCheckCircle,
   IconPrinter,
   IconFilter,
+  IconWarehouse,
+  IconTag,
+  IconTruck,
 } from "@/components/icons/Icons";
 
 export default function ReportsPage() {
-  const [reportType, setReportType] = useState<"material" | "production" | "financial">("material");
+  const [reportType, setReportType] = useState<"material" | "production" | "financial" | "master_inventory">("material");
   const [dateRange, setDateRange] = useState<"7D" | "30D" | "THIS_MONTH" | "THIS_QUARTER">("THIS_MONTH");
+  const dynamicBrands = useBrands();
+
+  const masterSummary = [
+    { label: "Master Pelanggan (Klien)", count: "Database Repeat & Baru", desc: "Klien B2B, Skincare, F&B & UMKM", href: "/dashboard/master/customers" },
+    { label: "Master Vendor Mitra Maklon", count: "4 Workshop Subkontrak", desc: "Offset Komori, Foil Kurnia, Die-Cut, UV", href: "/dashboard/master/vendors" },
+    { label: "Master Supplier Bahan", count: "4 Supplier Aktif", desc: "Kertas, Tinta, Foil & Bahan Kimia", href: "/dashboard/master/suppliers" },
+    { label: "Master Brand Kemasan", count: `${dynamicBrands.length || 5} Brand Aktif`, desc: dynamicBrands.join(", ") || "Packsolution, Estella, dll", href: "/dashboard/master/brands" },
+    { label: "Master Lokasi Gudang", count: "2 Fasilitas Gudang", desc: "Gudang 1 (Pabrik) & Gudang 2 (Ruko)", href: "/dashboard/master/warehouses" },
+    { label: "Master Satuan & Konversi", count: "6 Satuan & Rasio BOM", desc: "Plano, Rim, Lembar, Kg, Roll, Box", href: "/dashboard/master/units" },
+    { label: "Master Kategori Terpadu", count: "3 Kelompok Kategori", desc: "Bahan Baku, Sparepart, Produk Jadi", href: "/dashboard/category" },
+    { label: "Katalog Bahan Baku", count: "Inventori Multi-Gudang", desc: "Pelacakan Batch/Lot & Status ROP", href: "/dashboard/inventory/materials" },
+    { label: "Katalog Sparepart Mesin", count: "Suku Cadang Cetak", desc: "Heidelberg, Komori, Polar, Bobst", href: "/dashboard/inventory/spareparts" },
+    { label: "Katalog Produk Jadi", count: "Barang Jadi & WIP", desc: "Stok transit siap kirim per Brand", href: "/dashboard/inventory/products" },
+  ];
 
   // Mock data for Material Usage
   const materialReport = [
@@ -280,6 +299,20 @@ export default function ReportsPage() {
             <span className="absolute bottom-0 left-0 w-full h-0.5 bg-[#2B5FC7] dark:bg-[#3B6FE0] rounded-full" />
           )}
         </button>
+
+        <button
+          onClick={() => setReportType("master_inventory")}
+          className={`pb-3 transition-colors relative ${
+            reportType === "master_inventory"
+              ? "text-[#2B5FC7] dark:text-[#3B6FE0]"
+              : "text-[#6B7684] hover:text-[#1B2436] dark:text-[#8A94A6] dark:hover:text-[#E8ECF3]"
+          }`}
+        >
+          Rekap Master Data & Inventori Gudang
+          {reportType === "master_inventory" && (
+            <span className="absolute bottom-0 left-0 w-full h-0.5 bg-[#2B5FC7] dark:bg-[#3B6FE0] rounded-full" />
+          )}
+        </button>
       </div>
 
       {/* TAB 1: PEMAKAIAN MATERIAL */}
@@ -419,6 +452,37 @@ export default function ReportsPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* TAB 4: REKAP MASTER DATA & INVENTORI GUDANG */}
+      {reportType === "master_inventory" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {masterSummary.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="group p-4 rounded-xl bg-white dark:bg-[#16223A] border border-[#E2E6ED] dark:border-[#26334D] hover:border-[#2B5FC7] dark:hover:border-[#3B6FE0] shadow-sm transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between text-xs font-semibold text-[#2B5FC7] dark:text-[#60A5FA] mb-1">
+                    <span>{item.label}</span>
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity">Buka →</span>
+                  </div>
+                  <div className="text-base font-bold text-[#1B2436] dark:text-[#E8ECF3]">
+                    {item.count}
+                  </div>
+                  <p className="text-[11px] text-[#6B7684] dark:text-[#8A94A6] mt-1">
+                    {item.desc}
+                  </p>
+                </div>
+                <div className="mt-3 pt-2 border-t border-[#E2E6ED]/60 dark:border-[#26334D]/60 text-[11px] font-medium text-[#2B5FC7] dark:text-[#93B4F5]">
+                  Kelola Data Master / Stok →
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
       </div>

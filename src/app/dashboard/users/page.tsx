@@ -117,26 +117,29 @@ export default function UsersManagementPage() {
 
   // Permission Matrix Definition
   const permissionModules = [
-    { name: "Inventori & Transfer Stok", code: "inventory" },
+    { name: "Inventori (Bahan, Sparepart, Produk Jadi)", code: "inventory" },
+    { name: "Mutasi Stok & Stock Opname ACID", code: "transactions" },
+    { name: "Seluruh Master Data (Supplier, Brand, Gudang, Satuan, Kategori)", code: "master" },
     { name: "Order Pelanggan & Intake", code: "orders" },
     { name: "BOM Calculator & Pola Potong", code: "bom" },
     { name: "Penerbitan SPK Digital", code: "spk" },
     { name: "Kanban Pengerjaan Mesin", code: "production" },
     { name: "Inspeksi Lembar QC", code: "qc" },
+    { name: "Kurs USD & Analitik Harga Impor", code: "usd" },
     { name: "Invoicing & Rekam Bayar", code: "invoices" },
-    { name: "Laporan Finansial & Margin", code: "reports" },
+    { name: "Laporan Bisnis, Operasional & Margin", code: "reports" },
     { name: "Audit Trail Forensik", code: "audit" },
     { name: "Manajemen User & RBAC", code: "users" },
   ];
 
   const rolePermissions: Record<string, string[]> = {
-    owner: ["inventory", "orders", "bom", "spk", "production", "qc", "invoices", "reports", "audit", "users"],
-    manager: ["inventory", "orders", "bom", "spk", "production", "qc", "invoices", "reports", "audit", "users"],
+    owner: ["inventory", "transactions", "master", "orders", "bom", "spk", "production", "qc", "usd", "invoices", "reports", "audit", "users"],
+    manager: ["inventory", "transactions", "master", "orders", "bom", "spk", "production", "qc", "usd", "invoices", "reports", "audit", "users"],
     front_office: ["orders"],
     tim_design: ["bom", "spk"],
     kepala_produksi: ["spk", "production", "qc"],
     quality_control: ["production", "qc"],
-    staf_gudang: ["inventory"],
+    staf_gudang: ["inventory", "transactions", "master"],
   };
 
   const filteredUsers = users.filter((u) => {

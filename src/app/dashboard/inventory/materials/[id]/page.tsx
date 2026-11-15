@@ -64,7 +64,33 @@ export default function MaterialDetailPage({ params }: PageProps) {
   const warehouses = useWarehouses();
   const { data: allMovements, loading: loadingMovements, reload: reloadMovements } = useMovements("material", id);
 
-  const material = useMemo(() => materials?.find((m) => m.id === id), [materials, id]);
+  const [directMaterial, setDirectMaterial] = useState<Material | null>(null);
+  const [directLoading, setDirectLoading] = useState(false);
+
+  const foundMaterial = useMemo(() => {
+    if (!materials) return undefined;
+    return (
+      materials.find((m) => m.id === id) ||
+      materials.find((m) => m.code.toLowerCase() === id.toLowerCase()) ||
+      materials.find((m) => {
+        const numId = parseInt(id.replace(/^[a-z]+-/i, ""), 10);
+        return !isNaN(numId) && String(m.id) === String(numId);
+      })
+    );
+  }, [materials, id]);
+
+  useEffect(() => {
+    if (!foundMaterial && !loadingMaterials) {
+      setDirectLoading(true);
+      materialService
+        .get(id)
+        .then((res) => setDirectMaterial(res))
+        .catch(() => setDirectMaterial(null))
+        .finally(() => setDirectLoading(false));
+    }
+  }, [foundMaterial, loadingMaterials, id]);
+
+  const material = foundMaterial || directMaterial;
 
   // Mutation modal state
   const [mutationModal, setMutationModal] = useState<{
@@ -160,7 +186,7 @@ export default function MaterialDetailPage({ params }: PageProps) {
   };
 
   // 1. Loading State
-  if (loadingMaterials) {
+  if (loadingMaterials || directLoading) {
     return (
       <DashboardLayout title="Memuat Detail Bahan Baku...">
         <div className="max-w-7xl mx-auto space-y-6">

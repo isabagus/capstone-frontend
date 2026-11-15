@@ -49,7 +49,33 @@ export default function ProductDetailPage({ params }: PageProps) {
   const warehouses = useWarehouses();
   const { data: allMovements, loading: loadingMovements, reload: reloadMovements } = useMovements("product", id);
 
-  const product = useMemo(() => products?.find((p) => p.id === id), [products, id]);
+  const [directProduct, setDirectProduct] = useState<Product | null>(null);
+  const [directLoading, setDirectLoading] = useState(false);
+
+  const foundProduct = useMemo(() => {
+    if (!products) return undefined;
+    return (
+      products.find((p) => p.id === id) ||
+      products.find((p) => p.sku.toLowerCase() === id.toLowerCase()) ||
+      products.find((p) => {
+        const numId = parseInt(id.replace(/^[a-z]+-/i, ""), 10);
+        return !isNaN(numId) && String(p.id) === String(numId);
+      })
+    );
+  }, [products, id]);
+
+  useEffect(() => {
+    if (!foundProduct && !loadingProducts) {
+      setDirectLoading(true);
+      productService
+        .get(id)
+        .then((res) => setDirectProduct(res))
+        .catch(() => setDirectProduct(null))
+        .finally(() => setDirectLoading(false));
+    }
+  }, [foundProduct, loadingProducts, id]);
+
+  const product = foundProduct || directProduct;
 
   // Mutation modal state
   const [mutationModal, setMutationModal] = useState<{
