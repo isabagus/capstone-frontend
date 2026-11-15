@@ -87,7 +87,7 @@ const DEMO_USERS_MAP: Record<string, AuthUser> = {
     email: "produksi@packsolution.dev",
     role: "kepala_produksi",
     role_display: "Kepala Produksi",
-    permissions: ["production.view", "production.update", "spk.view", "qc.view"],
+    permissions: ["production.view", "production.update", "spk.view", "spk.issue", "qc.view", "qc.inspect", "vendor.view"],
   },
   "qc@packsolution.dev": {
     id: 6,
@@ -95,7 +95,7 @@ const DEMO_USERS_MAP: Record<string, AuthUser> = {
     email: "qc@packsolution.dev",
     role: "quality_control",
     role_display: "Quality Control",
-    permissions: ["qc.view", "qc.inspect", "production.view"],
+    permissions: ["qc.view", "qc.inspect", "production.view", "production.update", "spk.view", "spk.issue", "vendor.view"],
   },
   "gudang@packsolution.dev": {
     id: 7,

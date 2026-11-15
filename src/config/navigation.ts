@@ -67,7 +67,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "SPK Digital",
     href: "/dashboard/spk",
     icon: "📄",
-    roles: ["owner", "manager", "tim_design", "kepala_produksi"],
+    roles: ["owner", "manager", "tim_design", "kepala_produksi", "quality_control"],
     permission: "spk.view",
   },
   {
@@ -75,7 +75,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Master Vendor Maklon",
     href: ROUTES["master.vendors"],
     icon: "vendors",
-    roles: ["owner", "manager", "tim_design", "kepala_produksi"],
+    roles: ["owner", "manager", "tim_design", "kepala_produksi", "quality_control"],
     permission: null,
   },
   {
@@ -143,6 +143,33 @@ export const NAV_ITEMS: NavItem[] = [
 // =====================================================================
 const SG = ["staf_gudang"];
 const MGR_OWN = ["manager", "owner"];
+const KP_QC = ["kepala_produksi", "quality_control"];
+
+const KEPALA_PRODUKSI_NAV_GROUPS: NavGroup[] = [
+  {
+    id: "main",
+    label: null,
+    items: [
+      { id: "dashboard", label: "Dashboard", href: ROUTES.dashboard, icon: "dashboard", roles: KP_QC, permission: null },
+    ],
+  },
+  {
+    id: "production-flow",
+    label: "Produksi & Alur Kerja",
+    items: [
+      { id: "spk", label: "SPK Digital", href: ROUTES.spk, icon: "spk", roles: KP_QC, permission: null },
+      { id: "production", label: "Kanban Produksi", href: ROUTES.production, icon: "production", roles: KP_QC, permission: null },
+      { id: "qc", label: "Quality Control", href: ROUTES.qc, icon: "qc", roles: KP_QC, permission: null },
+    ],
+  },
+  {
+    id: "partners",
+    label: "Mitra Maklon",
+    items: [
+      { id: "master-vendors", label: "Master Vendor Maklon", href: ROUTES["master.vendors"], icon: "vendors", roles: KP_QC, permission: null },
+    ],
+  },
+];
 
 const FULL_ACCESS_NAV_GROUPS: NavGroup[] = [
   {
@@ -202,6 +229,8 @@ const FULL_ACCESS_NAV_GROUPS: NavGroup[] = [
 export const ROLE_NAV_GROUPS: Record<string, NavGroup[]> = {
   manager: FULL_ACCESS_NAV_GROUPS,
   owner: FULL_ACCESS_NAV_GROUPS,
+  kepala_produksi: KEPALA_PRODUKSI_NAV_GROUPS,
+  quality_control: KEPALA_PRODUKSI_NAV_GROUPS,
   staf_gudang: [
     {
       id: "main",
