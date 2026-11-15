@@ -20,11 +20,11 @@ import {
   IconArrowOut,
   IconClipboardCheck,
   IconLayers,
-  IconPackage,
+  // IconPackage,
   IconRefresh,
   IconSearch,
   IconTransfer,
-  IconTruck,
+  // IconTruck,
   IconWrench,
   IconBox,
 } from "@/components/icons/Icons";

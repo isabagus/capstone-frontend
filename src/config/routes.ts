@@ -5,6 +5,11 @@
 
 export const ROUTES = {
   dashboard: "/dashboard",
+  spk: "/dashboard/spk",
+  production: "/dashboard/production",
+  qc: "/dashboard/qc",
+  orders: "/dashboard/orders",
+  bom: "/dashboard/bom",
   "inventory.materials": "/dashboard/inventory/materials",
   "inventory.spareparts": "/dashboard/inventory/spareparts",
   "inventory.products": "/dashboard/inventory/products",
