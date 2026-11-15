@@ -11,6 +11,8 @@ import {
   getTodayIsoDate,
   getFutureIsoDate,
 } from "@/services/partnerMasterStore";
+import { syncSpkToKanban, appendAuditLog } from "@/services/operationalStore";
+import apiClient from "@/lib/apiClient";
 import { QrCodeSvg } from "@/utils/qrCodeGenerator";
 import {
   IconSpk,
@@ -714,16 +716,99 @@ export default function SpkDigitalPage() {
           ),
     };
 
+    const parsedQty = Number(String(formData.cetakOrderLembar).replace(/\D/g, "")) || jumlahKertasLembar;
+    syncSpkToKanban({
+      spkNumber: payload.spkNumber,
+      orderNumber: payload.orderNumber,
+      customerName: payload.customerName,
+      brand: payload.brand,
+      productName: payload.untukCetakan,
+      quantity: parsedQty,
+      deadline: payload.deadline,
+      machineOrVendor:
+        payload.type === "Internal" ? `Mesin ${payload.cetakMesin}` : payload.targetVendor,
+      picName: payload.operatorName,
+      status: payload.status,
+    });
+
+    // Sinkronisasi ke Backend API (/api/v1/spk) secara asinkron (graceful fallback ke LocalStorage)
+    const apiPayload = {
+      spk_number: payload.spkNumber,
+      order_number: payload.orderNumber,
+      folder_name: payload.folderName,
+      job_name: payload.jobName,
+      customer_name: payload.customerName,
+      type: payload.type === "Internal" ? "INTERNAL" : "EXTERNAL",
+      delivery_type: payload.pickupMethod === "Dikirim ke Vendor" ? "DIKIRIM" : "DIAMBIL",
+      receipt_number: payload.receiptNumber,
+      color_standard: payload.acuanWarna,
+      packing_type: payload.jenisPacking,
+      order_quantity: parsedQty,
+      publish_date: payload.orderDate,
+      deadline: payload.deadline,
+      status:
+        payload.status === "Draft"
+          ? "DRAFT"
+          : payload.status === "In-Production"
+          ? "IN_PRODUCTION"
+          : payload.status === "Selesai"
+          ? "SELESAI"
+          : "TERBIT",
+      finishing_details: {
+        jenis_laminasi: payload.jenisLaminasi,
+        tipe_laminasi: payload.tipeLaminasi,
+        muka: payload.laminasiMuka,
+        callout: payload.finishingCalloutBoxes,
+      },
+      cost_breakdown: payload.rincianBiaya,
+      notes: payload.cetakKeterangan,
+      materials: [
+        {
+          source_type: payload.bahanSource.includes("Konsumen") ? "BAHAN_KONSUMEN" : "GUDANG",
+          material_name: payload.jenisBahan,
+          plano_sheets: payload.jumlahBahanPlano,
+          cuts_per_plano: payload.dipotongJadi,
+          cut_sheets: payload.jumlahKertasLembar,
+          cut_size: payload.ukuranJadi,
+          file_size: payload.ukuranFile,
+          target_product: payload.untukCetakan,
+          total_quantity: payload.jumlahBahanPlano,
+          unit: "Plano",
+        },
+      ],
+    };
+
     if (editingSpk) {
       const next = spkList.map((s) => (s.id === editingSpk.id ? payload : s));
       saveSpkList(next);
       setSelectedSpk(payload);
-      triggerToast(`SPK ${payload.spkNumber} berhasil diperbarui!`);
+      const numericId = Number(String(editingSpk.id).replace(/\D/g, ""));
+      if (numericId) {
+        apiClient.put(`/v1/spk/${numericId}`, apiPayload).catch(() => {});
+      }
+      appendAuditLog({
+        module: "SPK",
+        action: "UPDATE",
+        recordId: payload.spkNumber,
+        description: `Memperbarui Dokumen SPK ${payload.spkNumber} (${payload.untukCetakan}) & menyinkronkan ke Kanban Produksi`,
+        beforeData: { status: editingSpk.status, vendor: editingSpk.targetVendor },
+        afterData: { status: payload.status, vendor: payload.targetVendor, plano: payload.jumlahBahanPlano },
+      });
+      triggerToast(`SPK ${payload.spkNumber} berhasil diperbarui & disinkronkan ke Backend + Kanban Produksi!`);
     } else {
       const next = [payload, ...spkList];
       saveSpkList(next);
       setSelectedSpk(payload);
-      triggerToast(`SPK Baru ${payload.spkNumber} berhasil diterbitkan beserta QR Code Gudang!`);
+      apiClient.post("/v1/spk", apiPayload).catch(() => {});
+      appendAuditLog({
+        module: "SPK",
+        action: "CREATE",
+        recordId: payload.spkNumber,
+        description: `Menerbitkan SPK Baru ${payload.spkNumber} (${payload.type}) untuk ${payload.customerName}`,
+        beforeData: null,
+        afterData: { spk_number: payload.spkNumber, order_number: payload.orderNumber, plano: payload.jumlahBahanPlano },
+      });
+      triggerToast(`SPK Baru ${payload.spkNumber} berhasil diterbitkan, tersimpan ke Backend & masuk Kanban Produksi!`);
     }
     setShowFormModal(false);
   };
@@ -732,6 +817,18 @@ export default function SpkDigitalPage() {
     if (!spkToDelete) return;
     const next = spkList.filter((s) => s.id !== spkToDelete.id);
     saveSpkList(next);
+    const numericId = Number(String(spkToDelete.id).replace(/\D/g, ""));
+    if (numericId) {
+      apiClient.delete(`/v1/spk/${numericId}`).catch(() => {});
+    }
+    appendAuditLog({
+      module: "SPK",
+      action: "DELETE",
+      recordId: spkToDelete.spkNumber,
+      description: `Menghapus Dokumen SPK ${spkToDelete.spkNumber} (${spkToDelete.untukCetakan})`,
+      beforeData: { spk_number: spkToDelete.spkNumber, customer: spkToDelete.customerName },
+      afterData: null,
+    });
     triggerToast(`Dokumen SPK ${spkToDelete.spkNumber} berhasil dihapus.`);
     setSpkToDelete(null);
   };

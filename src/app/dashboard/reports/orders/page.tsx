@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useBrands } from "@/hooks/useInventoryData";
 import { calculatePriorityFromDeadline } from "@/services/partnerMasterStore";
+import { useOrdersStore } from "@/services/operationalStore";
 import { downloadCsvReport } from "@/utils/exportCsv";
 import {
   IconOrders,
@@ -141,6 +142,7 @@ const ORDER_REPORT_DATA: OrderReportRow[] = [
 
 export default function OrdersReportPage() {
   const dynamicBrands = useBrands();
+  const [liveOrders] = useOrdersStore();
   const brandOptions = ["Semua", ...dynamicBrands];
 
   const [brandFilter, setBrandFilter] = useState<string>("Semua");
@@ -148,9 +150,38 @@ export default function OrdersReportPage() {
   const [customerTypeFilter, setCustomerTypeFilter] = useState<string>("Semua");
   const [search, setSearch] = useState<string>("");
 
+  const mergedReportRows = useMemo<OrderReportRow[]>(() => {
+    const liveMapped: OrderReportRow[] = liveOrders.map((o) => {
+      const existing = ORDER_REPORT_DATA.find((r) => r.orderNumber === o.orderNumber);
+      const estRevenue = existing?.revenue ?? o.quantity * 3200;
+      const estCogs = existing?.cogsTotal ?? Math.round(estRevenue * 0.58);
+      return {
+        id: o.id,
+        orderNumber: o.orderNumber,
+        invoiceNo: existing?.invoiceNo ?? o.orderNumber.replace("ORD-", "INV-"),
+        orderDate: o.orderDate,
+        deadlineDate: o.deadline,
+        client: o.customerName,
+        customerType: o.customerMode || existing?.customerType || "Repeat",
+        brand: o.brand,
+        serviceType: o.orderServiceType || existing?.serviceType || "Jasa Cetak Custom",
+        product: o.productName,
+        qty: o.quantity,
+        revenue: estRevenue,
+        cogsTotal: estCogs,
+        netProfit: estRevenue - estCogs,
+        status: o.status,
+      };
+    });
+    const extraHistorical = ORDER_REPORT_DATA.filter(
+      (r) => !liveMapped.some((l) => l.orderNumber === r.orderNumber)
+    );
+    return [...liveMapped, ...extraHistorical];
+  }, [liveOrders]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return ORDER_REPORT_DATA.filter((row) => {
+    return mergedReportRows.filter((row) => {
       if (brandFilter !== "Semua" && row.brand.toLowerCase() !== brandFilter.toLowerCase()) return false;
       if (serviceFilter !== "Semua" && row.serviceType !== serviceFilter) return false;
       if (customerTypeFilter !== "Semua" && row.customerType !== customerTypeFilter) return false;
@@ -164,7 +195,7 @@ export default function OrdersReportPage() {
       }
       return true;
     }).sort((a, b) => a.deadlineDate.localeCompare(b.deadlineDate));
-  }, [brandFilter, serviceFilter, customerTypeFilter, search]);
+  }, [mergedReportRows, brandFilter, serviceFilter, customerTypeFilter, search]);
 
   const totalRevenue = filtered.reduce((s, r) => s + r.revenue, 0);
   const totalExpenses = filtered.reduce((s, r) => s + r.cogsTotal, 0);

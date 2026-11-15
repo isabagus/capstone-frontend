@@ -2,6 +2,13 @@
 
 import { useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  useInvoicesStore,
+  appendAuditLog,
+  type InvoiceItem,
+} from "@/services/operationalStore";
+import { downloadCsvReport } from "@/utils/exportCsv";
 import {
   IconInvoice,
   IconSearch,
@@ -15,21 +22,9 @@ import {
   IconPlus,
 } from "@/components/icons/Icons";
 
-interface InvoiceItem {
-  id: string;
-  invoiceNumber: string;
-  orderNumber: string;
-  customerName: string;
-  customerCompany: string;
-  issueDate: string;
-  dueDate: string;
-  amount: number;
-  paidAmount: number;
-  status: "LUNAS" | "DP_DITERIMA" | "BELUM_BAYAR" | "JATUH_TEMPO";
-  itemsSummary: string;
-}
-
 export default function InvoicesPage() {
+  const { user } = useAuth();
+  const [invoices, setInvoices] = useInvoicesStore();
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceItem | null>(null);
@@ -37,61 +32,44 @@ export default function InvoicesPage() {
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<string>("BCA_TRANSFER");
   const [paymentNotes, setPaymentNotes] = useState<string>("");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const invoices: InvoiceItem[] = [
-    {
-      id: "INV-2026-0089",
-      invoiceNumber: "INV/2026/09/0089",
-      orderNumber: "ORD-2026-0104",
-      customerName: "Budi Santoso",
-      customerCompany: "PT Kuliner Nusantara Sejahtera",
-      issueDate: "2026-09-24",
-      dueDate: "2026-10-08",
-      amount: 14707500, // Rp 13.250.000 + PPN 11%
-      paidAmount: 7000000,
-      status: "DP_DITERIMA",
-      itemsSummary: "5.000 Pcs Hardbox Premium Ivory 300gsm (Foil Emas)",
-    },
-    {
-      id: "INV-2026-0088",
-      invoiceNumber: "INV/2026/09/0088",
-      orderNumber: "ORD-2026-0102",
-      customerName: "Siti Aminah",
-      customerCompany: "CV Herbal Alami Indonesia",
-      issueDate: "2026-09-22",
-      dueDate: "2026-10-06",
-      amount: 6882000,
-      paidAmount: 6882000,
-      status: "LUNAS",
-      itemsSummary: "3.000 Pcs Box Obat Herbal Duplex 350gsm + Doff",
-    },
-    {
-      id: "INV-2026-0087",
-      invoiceNumber: "INV/2026/09/0087",
-      orderNumber: "ORD-2026-0099",
-      customerName: "Hendra Wijaya",
-      customerCompany: "PT Kosmetik Cantik Utama",
-      issueDate: "2026-09-20",
-      dueDate: "2026-09-24",
-      amount: 28416000,
-      paidAmount: 0,
-      status: "JATUH_TEMPO",
-      itemsSummary: "10.000 Pcs Sleeve Tube Lipcream Hot Stamping",
-    },
-    {
-      id: "INV-2026-0086",
-      invoiceNumber: "INV/2026/09/0086",
-      orderNumber: "ORD-2026-0098",
-      customerName: "Rian Pratama",
-      customerCompany: "Kopi Senja Bahagia",
-      issueDate: "2026-09-23",
-      dueDate: "2026-10-07",
-      amount: 4995000,
-      paidAmount: 0,
-      status: "BELUM_BAYAR",
-      itemsSummary: "2.000 Pcs Paper Bag Craft Coklat 150gsm",
-    },
-  ];
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleExportCsv = () => {
+    downloadCsvReport(
+      "Rekap_Invoice_Penjualan.csv",
+      [
+        "No. Invoice",
+        "No. Order",
+        "Perusahaan / Klien",
+        "PIC Pelanggan",
+        "Tgl Terbit",
+        "Jatuh Tempo",
+        "Total Tagihan (Rp)",
+        "Sudah Dibayar (Rp)",
+        "Sisa Tagihan (Rp)",
+        "Status",
+        "Rincian Item",
+      ],
+      filteredInvoices.map((inv) => [
+        inv.invoiceNumber,
+        inv.orderNumber,
+        inv.customerCompany,
+        inv.customerName,
+        inv.issueDate,
+        inv.dueDate,
+        inv.amount,
+        inv.paidAmount,
+        Math.max(0, inv.amount - inv.paidAmount),
+        inv.status,
+        inv.itemsSummary,
+      ])
+    );
+  };
 
   const filteredInvoices = invoices.filter((inv) => {
     const matchesFilter = filterStatus === "ALL" || inv.status === filterStatus;
@@ -122,6 +100,17 @@ export default function InvoicesPage() {
   return (
     <DashboardLayout title="Manajemen Invoice & Penagihan">
       <div className="space-y-6">
+      {toastMessage && (
+        <div className="p-3 rounded-lg bg-[#ECFDF5] dark:bg-[#064E3B]/30 border border-[#A7F3D0] dark:border-[#065F46]/50 text-[#065F46] dark:text-[#34D399] text-xs flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2">
+            <IconCheckCircle size={16} />
+            <span>{toastMessage}</span>
+          </div>
+          <button onClick={() => setToastMessage(null)} className="opacity-70 hover:opacity-100">
+            <IconXCircle size={15} />
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -137,7 +126,11 @@ export default function InvoicesPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg border border-[#E2E6ED] dark:border-[#26334D] bg-white dark:bg-[#16223A] text-[#1B2436] dark:text-[#E8ECF3] hover:bg-[#F4F6FA] dark:hover:bg-[#1B2A44] transition-colors shadow-xs">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg border border-[#E2E6ED] dark:border-[#26334D] bg-white dark:bg-[#16223A] text-[#1B2436] dark:text-[#E8ECF3] hover:bg-[#F4F6FA] dark:hover:bg-[#1B2A44] transition-colors shadow-xs"
+          >
             <IconDownload size={14} />
             <span>Ekspor Rekap (Excel)</span>
           </button>
@@ -374,9 +367,19 @@ export default function InvoicesPage() {
                         Cetak Offset 4/0 Full Color, Laminasi Doff, Pond Die-cut, Perakitan Presisi
                       </div>
                     </td>
-                    <td className="p-3 text-right font-mono">5.000 Pcs</td>
-                    <td className="p-3 text-right font-mono">Rp 2.650</td>
-                    <td className="p-3 text-right font-mono font-semibold">Rp 13.250.000</td>
+                    <td className="p-3 text-right font-mono">
+                      {(selectedInvoice.quantity || 5000).toLocaleString("id-ID")} Pcs
+                    </td>
+                    <td className="p-3 text-right font-mono">
+                      Rp{" "}
+                      {(
+                        selectedInvoice.unitPrice ||
+                        Math.round(selectedInvoice.amount / 1.11 / (selectedInvoice.quantity || 5000))
+                      ).toLocaleString("id-ID")}
+                    </td>
+                    <td className="p-3 text-right font-mono font-semibold">
+                      Rp {Math.round(selectedInvoice.amount / 1.11).toLocaleString("id-ID")}
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -386,11 +389,18 @@ export default function InvoicesPage() {
                 <div className="w-72 space-y-2 text-xs">
                   <div className="flex justify-between">
                     <span className="text-[#6B7684] dark:text-[#8A94A6]">Subtotal:</span>
-                    <span className="font-mono font-medium">Rp 13.250.000</span>
+                    <span className="font-mono font-medium">
+                      Rp {Math.round(selectedInvoice.amount / 1.11).toLocaleString("id-ID")}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#6B7684] dark:text-[#8A94A6]">PPN 11%:</span>
-                    <span className="font-mono font-medium">Rp 1.457.500</span>
+                    <span className="font-mono font-medium">
+                      Rp{" "}
+                      {(
+                        selectedInvoice.amount - Math.round(selectedInvoice.amount / 1.11)
+                      ).toLocaleString("id-ID")}
+                    </span>
                   </div>
                   <div className="border-t border-[#E2E6ED] dark:border-[#26334D] pt-2 flex justify-between font-bold text-sm text-[#2B5FC7] dark:text-[#3B6FE0]">
                     <span>Total Tagihan:</span>
@@ -496,9 +506,49 @@ export default function InvoicesPage() {
                 Batal
               </button>
               <button
+                type="button"
                 onClick={() => {
-                  alert(`Pembayaran Rp ${paymentAmount.toLocaleString("id-ID")} berhasil dibukukan!`);
+                  if (!paymentAmount || paymentAmount <= 0) return;
+                  const newPaid = Math.min(
+                    selectedInvoice.amount,
+                    selectedInvoice.paidAmount + paymentAmount
+                  );
+                  const newStatus: InvoiceItem["status"] =
+                    newPaid >= selectedInvoice.amount ? "LUNAS" : "DP_DITERIMA";
+
+                  setInvoices(
+                    invoices.map((inv) =>
+                      inv.id === selectedInvoice.id
+                        ? { ...inv, paidAmount: newPaid, status: newStatus }
+                        : inv
+                    )
+                  );
+
+                  appendAuditLog({
+                    userName: user?.name,
+                    userRole: user?.role_display,
+                    module: "INVOICES",
+                    action: "UPDATE",
+                    recordId: selectedInvoice.invoiceNumber,
+                    description: `Mencatat pembayaran Rp ${paymentAmount.toLocaleString("id-ID")} via ${paymentMethod} untuk ${selectedInvoice.invoiceNumber} (${newStatus})`,
+                    beforeData: {
+                      paid_amount: selectedInvoice.paidAmount,
+                      status: selectedInvoice.status,
+                    },
+                    afterData: {
+                      paid_amount: newPaid,
+                      status: newStatus,
+                      method: paymentMethod,
+                      notes: paymentNotes || null,
+                    },
+                  });
+
                   setShowPaymentModal(false);
+                  setSelectedInvoice(null);
+                  setPaymentNotes("");
+                  triggerToast(
+                    `Pembayaran Rp ${paymentAmount.toLocaleString("id-ID")} untuk ${selectedInvoice.invoiceNumber} berhasil dibukukan (${newStatus})!`
+                  );
                 }}
                 className="px-4 py-2 text-xs font-semibold rounded-lg bg-[#065F46] hover:bg-[#047857] text-white shadow-xs"
               >

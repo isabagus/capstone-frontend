@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useBrands } from "@/hooks/useInventoryData";
 import { useProductionPicMaster } from "@/services/partnerMasterStore";
+import { useKanbanStore } from "@/services/operationalStore";
 import { downloadCsvReport } from "@/utils/exportCsv";
 import {
   IconProduction,
@@ -104,6 +105,7 @@ const PRODUCTION_REPORT_DATA: ProductionReportRow[] = [
 export default function ProductionReportPage() {
   const dynamicBrands = useBrands();
   const { pics } = useProductionPicMaster();
+  const [liveKanban] = useKanbanStore();
   const brandOptions = ["Semua", ...dynamicBrands];
 
   const [brandFilter, setBrandFilter] = useState<string>("Semua");
@@ -111,9 +113,42 @@ export default function ProductionReportPage() {
   const [stageFilter, setStageFilter] = useState<string>("Semua");
   const [search, setSearch] = useState<string>("");
 
+  const mergedProductionRows = useMemo<ProductionReportRow[]>(() => {
+    const stageMap: Record<string, ProductionReportRow["stage"]> = {
+      "Design Approved": "Antrean SPK",
+      "In-Progress": "Cetak Mesin",
+      Finishing: "Finishing / Subkontrak",
+      "QC Pending": "Menunggu QC",
+    };
+
+    const liveMapped: ProductionReportRow[] = liveKanban.map((k) => {
+      const existing = PRODUCTION_REPORT_DATA.find((r) => r.spkNumber === k.spkNumber);
+      const rawPic = (k.operatorAssigned || "").split("(")[0].trim();
+      return {
+        id: k.id,
+        spkNumber: k.spkNumber,
+        orderNumber: k.orderNumber,
+        brand: k.brand,
+        productName: k.productName,
+        machineOrVendor: k.machineAssigned || existing?.machineOrVendor || "Belum Dialokasikan",
+        picName: rawPic && rawPic !== "Belum Ditugaskan" ? rawPic : existing?.picName || "Rudi Hartono",
+        targetQty: k.quantity,
+        goodOutputQty: existing?.goodOutputQty ?? k.quantity,
+        setupTimeMinutes: existing?.setupTimeMinutes ?? 30,
+        deadlineDate: k.deadline,
+        stage: stageMap[k.stage] || "Antrean SPK",
+      };
+    });
+
+    const extraHistorical = PRODUCTION_REPORT_DATA.filter(
+      (r) => !liveMapped.some((l) => l.spkNumber === r.spkNumber)
+    );
+    return [...liveMapped, ...extraHistorical];
+  }, [liveKanban]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return PRODUCTION_REPORT_DATA.filter((row) => {
+    return mergedProductionRows.filter((row) => {
       if (brandFilter !== "Semua" && row.brand.toLowerCase() !== brandFilter.toLowerCase()) return false;
       if (picFilter !== "Semua" && row.picName !== picFilter) return false;
       if (stageFilter !== "Semua" && row.stage !== stageFilter) return false;
@@ -127,7 +162,7 @@ export default function ProductionReportPage() {
       }
       return true;
     }).sort((a, b) => a.deadlineDate.localeCompare(b.deadlineDate));
-  }, [brandFilter, picFilter, stageFilter, search]);
+  }, [mergedProductionRows, brandFilter, picFilter, stageFilter, search]);
 
   const handleExportCsv = () => {
     downloadCsvReport(

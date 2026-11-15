@@ -3,6 +3,11 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import {
+  useAuditLogsStore,
+  type AuditLogEntry,
+} from "@/services/operationalStore";
+import { downloadCsvReport } from "@/utils/exportCsv";
+import {
   IconAudit,
   IconSearch,
   IconFilter,
@@ -13,99 +18,42 @@ import {
   IconInfo,
 } from "@/components/icons/Icons";
 
-interface AuditLogEntry {
-  id: string;
-  timestamp: string;
-  userName: string;
-  userRole: string;
-  ipAddress: string;
-  module: "INVENTORY" | "ORDERS" | "BOM" | "SPK" | "PRODUCTION" | "QC" | "INVOICES" | "USERS";
-  action: "CREATE" | "UPDATE" | "DELETE" | "APPROVE" | "TRANSFER" | "INSPECT";
-  description: string;
-  recordId: string;
-  hashChecksum: string;
-  beforeData?: Record<string, any> | null;
-  afterData?: Record<string, any> | null;
-}
-
 export default function AuditTrailPage() {
+  const [logs] = useAuditLogsStore();
   const [filterModule, setFilterModule] = useState<string>("ALL");
   const [filterAction, setFilterAction] = useState<string>("ALL");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
 
-  const logs: AuditLogEntry[] = [
-    {
-      id: "AUD-99120",
-      timestamp: "2026-09-24 14:32:10",
-      userName: "Siti Rahmawati",
-      userRole: "Quality Control",
-      ipAddress: "192.168.1.45",
-      module: "QC",
-      action: "INSPECT",
-      recordId: "QC-2026-0041",
-      description: "Menyelesaikan inspeksi QC SPK-2026-0089: Status PASSED (5.000 Box Hardbox Ivory)",
-      hashChecksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      beforeData: { status: "IN_INSPECTION", verified_by: null },
-      afterData: { status: "PASSED", verified_by: "Siti Rahmawati", defective_count: 12, rework: false },
-    },
-    {
-      id: "AUD-99119",
-      timestamp: "2026-09-24 11:15:02",
-      userName: "Budi Prakoso",
-      userRole: "Kepala Produksi",
-      ipAddress: "192.168.1.30",
-      module: "PRODUCTION",
-      action: "UPDATE",
-      recordId: "PRD-2026-0089",
-      description: "Memindahkan status Kanban SPK-2026-0089 dari 'Cetak Offset' ke 'Finishing & Pond'",
-      hashChecksum: "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
-      beforeData: { stage: "PRINTING", machine: "Heidelberg SM 74", status: "RUNNING" },
-      afterData: { stage: "FINISHING", machine: "Sanwa Die-cut", status: "PENDING_SETUP" },
-    },
-    {
-      id: "AUD-99118",
-      timestamp: "2026-09-24 09:45:18",
-      userName: "Ahmad Fauzi",
-      userRole: "Staf Gudang",
-      ipAddress: "192.168.1.52",
-      module: "INVENTORY",
-      action: "TRANSFER",
-      recordId: "TRF-2026-0023",
-      description: "Transfer ACID 500 plano Ivory Board 300gsm dari Gudang Bahan Baku ke Gudang Produksi",
-      hashChecksum: "5d41402abc4b2a76b9719d911017c592b02a927a7183e8b088b488730b923157",
-      beforeData: { origin_qty: 3200, destination_qty: 150 },
-      afterData: { origin_qty: 2700, destination_qty: 650 },
-    },
-    {
-      id: "AUD-99117",
-      timestamp: "2026-09-23 16:20:00",
-      userName: "Maya Indah",
-      userRole: "Front Office",
-      ipAddress: "192.168.1.18",
-      module: "ORDERS",
-      action: "CREATE",
-      recordId: "ORD-2026-0104",
-      description: "Input Order Baru: 5.000 Pcs Hardbox Premium PT Kuliner Nusantara Sejahtera",
-      hashChecksum: "cf51a84f3f4c1e4c92a95e7d58d929497d519b7a3a9686016c90538a7989d98e",
-      beforeData: null,
-      afterData: { order_number: "ORD-2026-0104", qty: 5000, is_express: false, revisions_used: 1 },
-    },
-    {
-      id: "AUD-99116",
-      timestamp: "2026-09-23 14:10:55",
-      userName: "Dimas Aditya",
-      userRole: "Tim Design & Prepress",
-      ipAddress: "192.168.1.25",
-      module: "BOM",
-      action: "CREATE",
-      recordId: "BOM-2026-0089",
-      description: "Kalkulasi konversi plano ke potong & approval toleransi waste 4.8% untuk ORD-2026-0104",
-      hashChecksum: "8a6358ff05e3f4c398327150117079e000494cf5bb6ec5bb72199b0c9f13615e",
-      beforeData: null,
-      afterData: { sheet_cut: 4, plano_needed: 1250, waste_pct: 4.8, insheet_sheets: 60 },
-    },
-  ];
+  const handleExportAuditCsv = () => {
+    downloadCsvReport(
+      "Audit_Trail_Forensik_SHA256.csv",
+      [
+        "ID Log",
+        "Timestamp (WIB)",
+        "Nama Pengguna",
+        "Role",
+        "IP Address",
+        "Modul",
+        "Aksi",
+        "Record ID",
+        "Deskripsi Aktivitas",
+        "SHA-256 Checksum",
+      ],
+      filteredLogs.map((l) => [
+        l.id,
+        l.timestamp,
+        l.userName,
+        l.userRole,
+        l.ipAddress,
+        l.module,
+        l.action,
+        l.recordId,
+        l.description,
+        l.hashChecksum,
+      ])
+    );
+  };
 
   const filteredLogs = logs.filter((log) => {
     const matchesModule = filterModule === "ALL" || log.module === filterModule;
@@ -157,7 +105,11 @@ export default function AuditTrailPage() {
             <span>Immutable Ledger (SHA-256 Valid)</span>
           </div>
 
-          <button className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg border border-[#E2E6ED] dark:border-[#26334D] bg-white dark:bg-[#16223A] text-[#1B2436] dark:text-[#E8ECF3] hover:bg-[#F4F6FA] dark:hover:bg-[#1B2A44] transition-colors shadow-xs">
+          <button
+            type="button"
+            onClick={handleExportAuditCsv}
+            className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg border border-[#E2E6ED] dark:border-[#26334D] bg-white dark:bg-[#16223A] text-[#1B2436] dark:text-[#E8ECF3] hover:bg-[#F4F6FA] dark:hover:bg-[#1B2A44] transition-colors shadow-xs"
+          >
             <IconDownload size={14} />
             <span>Ekspor Audit Log</span>
           </button>

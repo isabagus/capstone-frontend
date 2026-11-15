@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useBrands } from "@/hooks/useInventoryData";
+import { useQcStore } from "@/services/operationalStore";
 import { downloadCsvReport } from "@/utils/exportCsv";
 import {
   IconCheckCircle,
@@ -94,6 +95,7 @@ const QC_REPORT_DATA: QcReportRow[] = [
 
 export default function QcReportPage() {
   const dynamicBrands = useBrands();
+  const [liveQc] = useQcStore();
   const brandOptions = ["Semua", ...dynamicBrands];
 
   const [brandFilter, setBrandFilter] = useState<string>("Semua");
@@ -101,9 +103,42 @@ export default function QcReportPage() {
   const [sourceFilter, setSourceFilter] = useState<string>("Semua");
   const [search, setSearch] = useState<string>("");
 
+  const mergedQcRows = useMemo<QcReportRow[]>(() => {
+    const liveMapped: QcReportRow[] = liveQc
+      .filter((q) => q.result !== "Pending")
+      .map((q, idx) => {
+        const existing = QC_REPORT_DATA.find((r) => r.spkNumber === q.spkNumber);
+        const isPass = q.result === "PASS";
+        const defectQty = isPass ? existing?.defectQty ?? 0 : Math.max(25, Math.round(q.quantity * 0.05));
+        return {
+          id: q.id,
+          qcCode: existing?.qcCode || `QC-2026-${String(920 + idx).padStart(4, "0")}`,
+          date: q.rawInspectionDate || existing?.date || "2026-09-24",
+          spkNumber: q.spkNumber,
+          brand: q.brand,
+          productName: q.productName,
+          sourceType: q.spkNumber.includes("EKS") ? "Subkontrak Vendor Mitra" : "Produksi Internal",
+          inspectedQty: q.quantity,
+          passedQty: Math.max(0, q.quantity - defectQty),
+          defectQty,
+          decision: isPass ? "Pass" : "Reject / Rework",
+          inspector: q.inspectorName,
+          defectNotes:
+            q.defectNotes ||
+            existing?.defectNotes ||
+            (isPass ? "Lulus seluruh parameter fisik & warna" : "Perlu rework"),
+        };
+      });
+
+    const extraHistorical = QC_REPORT_DATA.filter(
+      (r) => !liveMapped.some((l) => l.spkNumber === r.spkNumber)
+    );
+    return [...liveMapped, ...extraHistorical];
+  }, [liveQc]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return QC_REPORT_DATA.filter((row) => {
+    return mergedQcRows.filter((row) => {
       if (brandFilter !== "Semua" && row.brand.toLowerCase() !== brandFilter.toLowerCase()) return false;
       if (decisionFilter !== "Semua" && row.decision !== decisionFilter) return false;
       if (sourceFilter !== "Semua" && row.sourceType !== sourceFilter) return false;
@@ -117,7 +152,7 @@ export default function QcReportPage() {
       }
       return true;
     });
-  }, [brandFilter, decisionFilter, sourceFilter, search]);
+  }, [mergedQcRows, brandFilter, decisionFilter, sourceFilter, search]);
 
   const totalInspected = filtered.reduce((s, r) => s + r.inspectedQty, 0);
   const totalPassed = filtered.reduce((s, r) => s + r.passedQty, 0);

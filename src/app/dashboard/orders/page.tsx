@@ -12,6 +12,12 @@ import {
   getFutureIsoDate,
 } from "@/services/partnerMasterStore";
 import {
+  useOrdersStore,
+  syncOrderToBomQueue,
+  appendAuditLog,
+  type OrderItem,
+} from "@/services/operationalStore";
+import {
   IconOrders,
   IconTag,
   IconPlus,
@@ -29,147 +35,10 @@ import {
   IconUsers,
 } from "@/components/icons/Icons";
 
-interface OrderItem {
-  id: string;
-  orderNumber: string;
-  customerName: string;
-  customerPhone: string;
-  customerMode?: "Repeat" | "Baru";
-  orderServiceType?: "Jasa Cetak Custom" | "Beli Produk Jadi";
-  brand: string;
-  productName: string;
-  dimensions: string;
-  paperType: string;
-  quantity: number;
-  finishing: string[];
-  stockPreValidation: "Tersedia" | "Menipis" | "Kurang";
-  priority: "Normal" | "High" | "Express";
-  deadline: string;
-  orderDate: string;
-  status: "Order Placed" | "Queued for Design" | "Design Approved" | "In-Production" | "Siap Kirim (Ready Stock)";
-  revisionCount: number; // Max 4
-  revisionHistory: { revNumber: number; date: string; notes: string }[];
-  notes?: string;
-}
-
-const INITIAL_ORDERS: OrderItem[] = [
-  {
-    id: "1",
-    orderNumber: "ORD-2026-0901",
-    customerName: "PT Artha Boga Sejahtera",
-    customerPhone: "0812-3456-7890",
-    brand: "Packsolution.id",
-    productName: "Hardbox Rigid Premium Magnetic Gold",
-    dimensions: "25 × 20 × 8 cm",
-    paperType: "Kertas Ivory 300 GSM + Greyboard 2mm",
-    quantity: 2500,
-    finishing: ["Laminasi Doff", "Foil Hot Print Gold", "Die-cut"],
-    stockPreValidation: "Tersedia",
-    priority: "Express",
-    deadline: getFutureIsoDate(1),
-    orderDate: getTodayIsoDate(),
-    status: "Queued for Design",
-    revisionCount: 2,
-    revisionHistory: [
-      { revNumber: 1, date: "10:00 WIB", notes: "Ubah posisi logo 2cm ke kanan" },
-      { revNumber: 2, date: "14:30 WIB", notes: "Penyesuaian warna foil ke Gold Shiny #4" },
-    ],
-    notes: "Pesanan express untuk launching produk minggu ini.",
-  },
-  {
-    id: "2",
-    orderNumber: "ORD-2026-0902",
-    customerName: "Estella Glow Skincare",
-    customerPhone: "0813-9876-5432",
-    brand: "Estella",
-    productName: "Softbox Skincare Serum Matte Doff",
-    dimensions: "12 × 5 × 5 cm",
-    paperType: "Kraft Liner Brown 275 GSM",
-    quantity: 5000,
-    finishing: ["Laminasi Doff", "Emboss Logo"],
-    stockPreValidation: "Tersedia",
-    priority: "High",
-    deadline: getFutureIsoDate(4),
-    orderDate: getTodayIsoDate(),
-    status: "Order Placed",
-    revisionCount: 1,
-    revisionHistory: [
-      { revNumber: 1, date: "11:20 WIB", notes: "Tambahkan QR Code BPOM pada sisi samping" },
-    ],
-    notes: "Warna kraft natural dengan tinta putih pekat.",
-  },
-  {
-    id: "3",
-    orderNumber: "ORD-2026-0903",
-    customerName: "Pepipapier Stationery",
-    customerPhone: "0811-2233-4455",
-    brand: "Pepipapier",
-    productName: "Greeting Card & Custom Envelope Foil",
-    dimensions: "15 × 10 cm",
-    paperType: "Art Paper 150 GSM",
-    quantity: 1200,
-    finishing: ["Foil Hot Print Gold", "Spot UV"],
-    stockPreValidation: "Tersedia",
-    priority: "Normal",
-    deadline: getFutureIsoDate(7),
-    orderDate: getTodayIsoDate(),
-    status: "Design Approved",
-    revisionCount: 4,
-    revisionHistory: [
-      { revNumber: 1, date: "09:00 WIB", notes: "Koreksi font tulisan wedding" },
-      { revNumber: 2, date: "13:00 WIB", notes: "Ubah background dari krem ke broken white" },
-      { revNumber: 3, date: "16:30 WIB", notes: "Perbesar motif bunga di pojok kanan bawah" },
-      { revNumber: 4, date: "09:15 WIB", notes: "Revisi final: penyesuaian margin amplop" },
-    ],
-    notes: "Mencapai batas 4x revisi desain. Desain telah di-ACC final.",
-  },
-  {
-    id: "4",
-    orderNumber: "ORD-2026-0904",
-    customerName: "Studio Foto Memoirs",
-    customerPhone: "0877-6655-4433",
-    brand: "memoirs.print",
-    productName: "Photobook Hardcover Linen Series",
-    dimensions: "30 × 30 cm",
-    paperType: "Art Paper 150 GSM",
-    quantity: 350,
-    finishing: ["Laminasi Doff", "Hardcover Board"],
-    stockPreValidation: "Tersedia",
-    priority: "Express",
-    deadline: getFutureIsoDate(2),
-    orderDate: getTodayIsoDate(),
-    status: "Queued for Design",
-    revisionCount: 0,
-    revisionHistory: [],
-    notes: "Foto resolusi tinggi sudah diunggah di drive.",
-  },
-  {
-    id: "5",
-    orderNumber: "ORD-2026-0905",
-    customerName: "Pikpurry Pet Care",
-    customerPhone: "0856-7788-9900",
-    brand: "pikpurry",
-    productName: "Packaging Snack Pouch Ziplock Cat Treats",
-    dimensions: "20 × 12 cm",
-    paperType: "Kertas Duplex Coated 350 GSM",
-    quantity: 10000,
-    finishing: ["Laminasi Glossy", "Ziplock Sealing"],
-    stockPreValidation: "Menipis",
-    priority: "Normal",
-    deadline: getFutureIsoDate(10),
-    orderDate: getTodayIsoDate(),
-    status: "Order Placed",
-    revisionCount: 1,
-    revisionHistory: [
-      { revNumber: 1, date: "22 Sep 15:00", notes: "Ubah tabel nutrisi pakan kucing" },
-    ],
-    notes: "Stok duplex di Gudang 2 menipis, perlu koordinasi saat cetak.",
-  },
-];
-
 export default function OrdersPage() {
   const { user } = useAuth();
-  const [orders, setOrders] = useState<OrderItem[]>(INITIAL_ORDERS);
+  const [orders, setOrders] = useOrdersStore();
+  const [uploadedDesignFile, setUploadedDesignFile] = useState<string>("");
 
   // Filters
   const [selectedBrand, setSelectedBrand] = useState<string>("Semua");
@@ -707,11 +576,51 @@ export default function OrdersPage() {
                                   ord.id === o.id ? { ...ord, status: "Queued for Design" } : ord
                                 )
                               );
+                              appendAuditLog({
+                                userName: user?.name,
+                                userRole: user?.role_display,
+                                module: "ORDERS",
+                                action: "UPDATE",
+                                recordId: o.orderNumber,
+                                description: `Meneruskan Order ${o.orderNumber} (${o.customerName}) ke Antrean Tim Design`,
+                                beforeData: { status: o.status },
+                                afterData: { status: "Queued for Design" },
+                              });
                               triggerToast(`Order ${o.orderNumber} berhasil diteruskan ke Antrean Tim Design!`);
                             }}
                             className="px-2 py-1 rounded-md text-[11px] font-medium bg-[#2B5FC7] hover:bg-[#1D4FB8] dark:bg-[#3B6FE0] text-white shadow-sm transition-colors"
                           >
                             Kirim ke Desain
+                          </button>
+                        )}
+                        {o.status === "Queued for Design" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const approvedOrder: OrderItem = { ...o, status: "Design Approved" };
+                              setOrders(
+                                orders.map((ord) =>
+                                  ord.id === o.id ? approvedOrder : ord
+                                )
+                              );
+                              syncOrderToBomQueue(approvedOrder);
+                              appendAuditLog({
+                                userName: user?.name,
+                                userRole: user?.role_display,
+                                module: "ORDERS",
+                                action: "APPROVE",
+                                recordId: o.orderNumber,
+                                description: `ACC Final Desain Order ${o.orderNumber} (${o.productName}) & diteruskan otomatis ke antrean BOM Calculator`,
+                                beforeData: { status: o.status },
+                                afterData: { status: "Design Approved" },
+                              });
+                              triggerToast(
+                                `Desain ${o.orderNumber} di-ACC! Pesanan otomatis masuk ke antrean BOM Calculator.`
+                              );
+                            }}
+                            className="px-2 py-1 rounded-md text-[11px] font-medium bg-[#065F46] hover:bg-[#047857] text-white shadow-sm transition-colors"
+                          >
+                            ACC Desain
                           </button>
                         )}
                       </td>
@@ -1226,14 +1135,38 @@ export default function OrdersPage() {
                       <label className="block font-semibold text-[#1B2436] dark:text-[#E8ECF3] mb-1">
                         Upload File Desain Awal Pelanggan
                       </label>
-                      <div className="p-4 border-2 border-dashed border-[#E2E6ED] dark:border-[#26334D] rounded-lg text-center bg-[#F4F6FA]/50 dark:bg-[#0F1B2D]/50">
-                        <div className="text-xs text-[#2B5FC7] dark:text-[#3B6FE0] font-semibold">
-                          Pilih file PDF / AI / ZIP
-                        </div>
-                        <div className="text-[10px] text-[#6B7684] dark:text-[#8A94A6] mt-0.5">
-                          Maksimal ukuran file 100MB
-                        </div>
-                      </div>
+                      <label className="block cursor-pointer p-4 border-2 border-dashed border-[#E2E6ED] dark:border-[#26334D] hover:border-[#2B5FC7] dark:hover:border-[#3B6FE0] rounded-lg text-center bg-[#F4F6FA]/50 dark:bg-[#0F1B2D]/50 transition-colors">
+                        <input
+                          type="file"
+                          accept=".pdf,.ai,.zip,.png,.jpg,.jpeg,.cdr,.psd"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setUploadedDesignFile(`${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+                            }
+                          }}
+                        />
+                        {uploadedDesignFile ? (
+                          <div className="space-y-1">
+                            <div className="text-xs text-[#065F46] dark:text-[#34D399] font-semibold">
+                              ✓ File Terpilih: {uploadedDesignFile}
+                            </div>
+                            <div className="text-[10px] text-[#2B5FC7] dark:text-[#60A5FA] underline">
+                              Klik untuk mengganti file desain
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="text-xs text-[#2B5FC7] dark:text-[#3B6FE0] font-semibold">
+                              Pilih file PDF / AI / ZIP
+                            </div>
+                            <div className="text-[10px] text-[#6B7684] dark:text-[#8A94A6] mt-0.5">
+                              Maksimal ukuran file 100MB (Klik untuk memilih file dari komputer)
+                            </div>
+                          </>
+                        )}
+                      </label>
                     </div>
 
                     <div>
@@ -1360,10 +1293,31 @@ export default function OrdersPage() {
                       }
 
                       setOrders([newOrder, ...orders]);
+                      syncOrderToBomQueue(newOrder);
+                      appendAuditLog({
+                        userName: user?.name,
+                        userRole: user?.role_display,
+                        module: "ORDERS",
+                        action: "CREATE",
+                        recordId: newOrder.orderNumber,
+                        description: `Input Order Baru (${orderServiceType}): ${newOrder.quantity.toLocaleString("id-ID")} Pcs ${newOrder.productName} — ${newOrder.customerName}`,
+                        beforeData: null,
+                        afterData: {
+                          order_number: newOrder.orderNumber,
+                          customer: newOrder.customerName,
+                          qty: newOrder.quantity,
+                          priority: newOrder.priority,
+                          deadline: newOrder.deadline,
+                          design_file: uploadedDesignFile || null,
+                        },
+                      });
+                      setUploadedDesignFile("");
                       setShowNewOrderModal(false);
                       setFormStep(1);
                       triggerToast(
-                        `Pesanan ${newOrder.orderNumber} (${orderServiceType} - Pelanggan ${customerMode}) berhasil diterbitkan!`
+                        isReadyStock
+                          ? `Pesanan ${newOrder.orderNumber} berhasil diterbitkan & Invoice otomatis dibuat!`
+                          : `Pesanan ${newOrder.orderNumber} berhasil diterbitkan & disinkronkan ke antrean BOM / Laporan Order!`
                       );
                     }}
                     className="px-4 py-2 rounded-lg bg-[#2B5FC7] hover:bg-[#1D4FB8] dark:bg-[#3B6FE0] text-white text-xs font-medium shadow-sm"

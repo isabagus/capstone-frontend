@@ -7,8 +7,13 @@ import { useBrands } from "@/hooks/useInventoryData";
 import {
   useProductionPicMaster,
   calculatePriorityFromDeadline,
-  getFutureIsoDate,
 } from "@/services/partnerMasterStore";
+import {
+  useKanbanStore,
+  syncKanbanTaskToQc,
+  appendAuditLog,
+  type KanbanTask,
+} from "@/services/operationalStore";
 import {
   IconGear,
   IconCheck,
@@ -16,101 +21,6 @@ import {
   IconZap,
   IconUsers,
 } from "@/components/icons/Icons";
-
-interface KanbanTask {
-  id: string;
-  spkNumber: string;
-  orderNumber: string;
-  customerName: string;
-  brand: string;
-  productName: string;
-  quantity: number;
-  deadline: string; // ISO YYYY-MM-DD
-  stage: "Design Approved" | "In-Progress" | "Finishing" | "QC Pending";
-  machineAssigned?: string;
-  operatorAssigned?: string; // Penanggung Jawab (PIC)
-}
-
-const INITIAL_TASKS: KanbanTask[] = [
-  {
-    id: "1",
-    spkNumber: "SPK-INT-2026-081",
-    orderNumber: "ORD-2026-0901",
-    customerName: "PT Artha Boga Sejahtera",
-    brand: "Packsolution.id",
-    productName: "Hardbox Rigid Premium Magnetic Gold",
-    quantity: 2500,
-    deadline: getFutureIsoDate(1),
-    stage: "In-Progress",
-    machineAssigned: "Heidelberg SM-74 (4 Warna)",
-    operatorAssigned: "Rudi Hartono (Kepala Produksi & Koordinator Mesin)",
-  },
-  {
-    id: "2",
-    spkNumber: "SPK-EKS-2026-042",
-    orderNumber: "ORD-2026-0903",
-    customerName: "Pepipapier Stationery",
-    brand: "Pepipapier",
-    productName: "Greeting Card & Custom Envelope Foil",
-    quantity: 1200,
-    deadline: getFutureIsoDate(6),
-    stage: "Finishing",
-    machineAssigned: "Vendor Foil & Emboss Kurnia",
-    operatorAssigned: "Wahyu Pratama (PIC Pengawasan Subkontrak Vendor Mitra)",
-  },
-  {
-    id: "3",
-    spkNumber: "SPK-INT-2026-082",
-    orderNumber: "ORD-2026-0902",
-    customerName: "Estella Glow Skincare",
-    brand: "Estella",
-    productName: "Softbox Skincare Serum Matte Doff",
-    quantity: 5000,
-    deadline: getFutureIsoDate(4),
-    stage: "Design Approved",
-    machineAssigned: "Belum Dialokasikan",
-    operatorAssigned: "Belum Ditugaskan",
-  },
-  {
-    id: "4",
-    spkNumber: "SPK-INT-2026-079",
-    orderNumber: "ORD-2026-0899",
-    customerName: "Studio Foto Memoirs",
-    brand: "memoirs.print",
-    productName: "Photobook Hardcover Linen Series",
-    quantity: 350,
-    deadline: getFutureIsoDate(2),
-    stage: "QC Pending",
-    machineAssigned: "Mesin Pengeleman Hotmelt Otomatis",
-    operatorAssigned: "Slamet Riyadi (Teknisi Finishing, Laminasi & Lem)",
-  },
-  {
-    id: "5",
-    spkNumber: "SPK-INT-2026-078",
-    orderNumber: "ORD-2026-0895",
-    customerName: "Pikpurry Pet Care",
-    brand: "pikpurry",
-    productName: "Packaging Snack Pouch Ziplock",
-    quantity: 10000,
-    deadline: getFutureIsoDate(3),
-    stage: "Finishing",
-    machineAssigned: "Mesin Pond & Die-Cut Bobst",
-    operatorAssigned: "Ahmad Subagio (Teknisi Pond & Die-Cut Presisi)",
-  },
-  {
-    id: "6",
-    spkNumber: "SPK-INT-2026-083",
-    orderNumber: "ORD-2026-0906",
-    customerName: "Kopi Kenangan Senja",
-    brand: "Packsolution.id",
-    productName: "Paper Cup Sleeve Double Wall Emboss",
-    quantity: 8000,
-    deadline: getFutureIsoDate(1),
-    stage: "Design Approved",
-    machineAssigned: "Belum Dialokasikan",
-    operatorAssigned: "Belum Ditugaskan",
-  },
-];
 
 const COLUMNS: { key: KanbanTask["stage"]; label: string; countBadgeColor: string }[] = [
   {
@@ -136,7 +46,7 @@ const COLUMNS: { key: KanbanTask["stage"]; label: string; countBadgeColor: strin
 ];
 
 export default function ProductionKanbanPage() {
-  const [tasks, setTasks] = useState<KanbanTask[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useKanbanStore();
   const [selectedBrand, setSelectedBrand] = useState<string>("Semua");
   const [selectedPicFilter, setSelectedPicFilter] = useState<string>("Semua");
 
@@ -159,8 +69,26 @@ export default function ProductionKanbanPage() {
   };
 
   const moveTask = (taskId: string, targetStage: KanbanTask["stage"]) => {
+    const found = tasks.find((t) => t.id === taskId);
     setTasks(tasks.map((t) => (t.id === taskId ? { ...t, stage: targetStage } : t)));
-    triggerToast(`Status kartu berhasil diperbarui ke tahap ${targetStage}!`);
+    if (found) {
+      if (targetStage === "QC Pending") {
+        syncKanbanTaskToQc({ ...found, stage: targetStage });
+      }
+      appendAuditLog({
+        module: "PRODUCTION",
+        action: "UPDATE",
+        recordId: found.spkNumber,
+        description: `Memindahkan kartu Kanban ${found.spkNumber} (${found.productName}) dari '${found.stage}' ke '${targetStage}'`,
+        beforeData: { stage: found.stage },
+        afterData: { stage: targetStage },
+      });
+    }
+    triggerToast(
+      targetStage === "QC Pending"
+        ? `Status ${found?.spkNumber || "kartu"} masuk tahap QC Pending & otomatis diteruskan ke antrean Quality Control!`
+        : `Status kartu berhasil diperbarui ke tahap ${targetStage}!`
+    );
   };
 
   const dynamicBrands = useBrands();
@@ -548,6 +476,22 @@ export default function ProductionKanbanPage() {
                           : t
                       )
                     );
+                    appendAuditLog({
+                      module: "PRODUCTION",
+                      action: "UPDATE",
+                      recordId: taskToAllocate.spkNumber,
+                      description: `Alokasi mesin ${selectedMachine} & PIC ${picLabel} untuk ${taskToAllocate.spkNumber}`,
+                      beforeData: {
+                        stage: taskToAllocate.stage,
+                        machine: taskToAllocate.machineAssigned,
+                        pic: taskToAllocate.operatorAssigned,
+                      },
+                      afterData: {
+                        stage: "In-Progress",
+                        machine: selectedMachine,
+                        pic: picLabel,
+                      },
+                    });
                     setShowAllocateModal(false);
                     triggerToast(
                       `SPK ${taskToAllocate.spkNumber} ditugaskan ke ${picLabel} dan masuk tahap In-Progress!`

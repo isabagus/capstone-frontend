@@ -6,6 +6,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBrands } from "@/hooks/useInventoryData";
 import DataFilterBar from "@/components/ui/DataFilterBar";
 import {
+  useQcStore,
+  syncQcDecisionToDownstream,
+  type InspectionTask,
+} from "@/services/operationalStore";
+import {
   IconQc,
   IconCheck,
   IconX,
@@ -18,121 +23,10 @@ import {
   IconTruck,
 } from "@/components/icons/Icons";
 
-interface InspectionTask {
-  id: string;
-  spkNumber: string;
-  orderNumber: string;
-  brand: string;
-  customerName: string;
-  productName: string;
-  quantity: number;
-  inspectorName: string;
-  inspectionDate: string;
-  rawInspectionDate?: string;
-  result: "PASS" | "FAIL" | "Pending";
-  defectNotes?: string;
-  reworkCount: number;
-  checklist: {
-    dimensions: boolean;
-    colorAccuracy: boolean;
-    glueAdhesion: boolean;
-    foilEmbossQuality: boolean;
-    cleanliness: boolean;
-  };
-}
-
-const SAMPLE_QC_TASKS: InspectionTask[] = [
-  {
-    id: "1",
-    spkNumber: "SPK-INT-2026-079",
-    orderNumber: "ORD-2026-0899",
-    brand: "memoirs.print",
-    customerName: "Studio Foto Memoirs",
-    productName: "Photobook Hardcover Linen Series",
-    quantity: 350,
-    inspectorName: "Nina Sari (QC Inspector)",
-    inspectionDate: "24 Sep 2026",
-    rawInspectionDate: "2026-09-24",
-    result: "Pending",
-    reworkCount: 0,
-    checklist: {
-      dimensions: true,
-      colorAccuracy: true,
-      glueAdhesion: true,
-      foilEmbossQuality: false,
-      cleanliness: true,
-    },
-  },
-  {
-    id: "2",
-    spkNumber: "SPK-INT-2026-076",
-    orderNumber: "ORD-2026-0888",
-    brand: "Packsolution.id",
-    customerName: "PT Artha Boga Sejahtera",
-    productName: "Box Kemasan Kue Lapis Legit Premium",
-    quantity: 1000,
-    inspectorName: "Nina Sari (QC Inspector)",
-    inspectionDate: "24 Sep 2026",
-    rawInspectionDate: "2026-09-24",
-    result: "PASS",
-    reworkCount: 0,
-    checklist: {
-      dimensions: true,
-      colorAccuracy: true,
-      glueAdhesion: true,
-      foilEmbossQuality: true,
-      cleanliness: true,
-    },
-  },
-  {
-    id: "3",
-    spkNumber: "SPK-EKS-2026-039",
-    orderNumber: "ORD-2026-0875",
-    brand: "Estella",
-    customerName: "Estella Glow Skincare",
-    productName: "Kemasan Lipat Serum Retinol",
-    quantity: 3000,
-    inspectorName: "Nina Sari (QC Inspector)",
-    inspectionDate: "23 Sep 2026",
-    rawInspectionDate: "2026-09-23",
-    result: "FAIL",
-    defectNotes: "Potongan pond pinggir bergeser 2.5mm di atas toleransi standar vendor.",
-    reworkCount: 1,
-    checklist: {
-      dimensions: false,
-      colorAccuracy: true,
-      glueAdhesion: true,
-      foilEmbossQuality: true,
-      cleanliness: true,
-    },
-  },
-  {
-    id: "4",
-    spkNumber: "SPK-INT-2026-074",
-    orderNumber: "ORD-2026-0862",
-    brand: "Pepipapier",
-    customerName: "Pepipapier Stationery",
-    productName: "Envelope Foil Gold Emboss Custom",
-    quantity: 1500,
-    inspectorName: "Rudi Hartono (Kepala Produksi)",
-    inspectionDate: "22 Sep 2026",
-    rawInspectionDate: "2026-09-22",
-    result: "PASS",
-    reworkCount: 0,
-    checklist: {
-      dimensions: true,
-      colorAccuracy: true,
-      glueAdhesion: true,
-      foilEmbossQuality: true,
-      cleanliness: true,
-    },
-  },
-];
-
 export default function QualityControlPage() {
   const { user } = useAuth();
-  const [tasks, setTasks] = useState<InspectionTask[]>(SAMPLE_QC_TASKS);
-  const [selectedTask, setSelectedTask] = useState<InspectionTask>(SAMPLE_QC_TASKS[0]);
+  const [tasks, setTasks] = useQcStore();
+  const [selectedTask, setSelectedTask] = useState<InspectionTask>(() => tasks[0]);
 
   // Filter States
   const [selectedBrand, setSelectedBrand] = useState<string>("Semua");
@@ -174,6 +68,8 @@ export default function QualityControlPage() {
   const handleSaveInspection = () => {
     const isAllChecked = Object.values(checklistState).every(Boolean);
     const finalDecision = isAllChecked && decision === "PASS" ? "PASS" : "FAIL";
+    const resolvedDefect =
+      finalDecision === "FAIL" ? defectReason || "Cacat dimensi / fisik" : undefined;
 
     setTasks(
       tasks.map((t) =>
@@ -182,22 +78,30 @@ export default function QualityControlPage() {
               ...t,
               result: finalDecision,
               checklist: checklistState,
-              defectNotes: finalDecision === "FAIL" ? defectReason || "Cacat dimensi / fisik" : undefined,
+              defectNotes: resolvedDefect,
               reworkCount: finalDecision === "FAIL" ? t.reworkCount + 1 : t.reworkCount,
             }
           : t
       )
     );
 
+    syncQcDecisionToDownstream({
+      task: selectedTask,
+      decision: finalDecision,
+      defectNotes: resolvedDefect,
+      userName: user?.name,
+      userRole: user?.role_display,
+    });
+
     setShowChecklistModal(false);
 
     if (finalDecision === "PASS") {
       triggerToast(
-        `✅ SPK ${selectedTask.spkNumber} dinyatakan LOLOS QC (PASS)! Status berubah ke Ready to Deliver & stok terpotong otomatis.`
+        `✅ SPK ${selectedTask.spkNumber} dinyatakan LOLOS QC (PASS)! Status berubah ke Ready to Deliver & Invoice otomatis diterbitkan.`
       );
     } else {
       triggerToast(
-        `⚠️ SPK ${selectedTask.spkNumber} TIDAK LOLOS (FAIL). Pesanan otomatis dialihkan kembali ke antrean Re-work!`
+        `⚠️ SPK ${selectedTask.spkNumber} TIDAK LOLOS (FAIL). Kartu Kanban otomatis dikembalikan ke tahap Finishing untuk Re-work!`
       );
     }
   };

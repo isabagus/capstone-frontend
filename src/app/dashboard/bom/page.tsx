@@ -19,83 +19,16 @@ import {
 } from "@/components/icons/Icons";
 import CuttingLayoutVisualizer, { LayoutSolution } from "@/components/bom/CuttingLayoutVisualizer";
 import { bomService } from "@/services/bomService";
-
-interface OrderForBom {
-  id: string;
-  orderNumber: string;
-  customerName: string;
-  brand: string;
-  productName: string;
-  orderQuantity: number; // pcs
-  paperType: string;
-  paperGsm: number;
-  planoLengthCm: number;
-  planoWidthCm: number;
-  cutLengthCm: number;
-  cutWidthCm: number;
-  wastePercent: number;
-  insheetQuantity: number; // lembar cadangan cetak
-  status: "Belum Dihitung" | "BOM Selesai" | "SPK Terbit";
-}
-
-const SAMPLE_ORDERS_QUEUE: OrderForBom[] = [
-  {
-    id: "1",
-    orderNumber: "ORD-2026-0901",
-    customerName: "PT Artha Boga Sejahtera",
-    brand: "Packsolution.id",
-    productName: "Hardbox Rigid Premium Magnetic Gold",
-    orderQuantity: 2500,
-    paperType: "Kertas Ivory 300 GSM",
-    paperGsm: 300,
-    planoLengthCm: 109,
-    planoWidthCm: 79,
-    cutLengthCm: 48,
-    cutWidthCm: 33,
-    wastePercent: 5,
-    insheetQuantity: 150,
-    status: "Belum Dihitung",
-  },
-  {
-    id: "2",
-    orderNumber: "ORD-2026-0904",
-    customerName: "Studio Foto Memoirs",
-    brand: "memoirs.print",
-    productName: "Photobook Hardcover Linen Series",
-    orderQuantity: 350,
-    paperType: "Art Paper 150 GSM",
-    paperGsm: 150,
-    planoLengthCm: 100,
-    planoWidthCm: 65,
-    cutLengthCm: 32,
-    cutWidthCm: 22,
-    wastePercent: 4,
-    insheetQuantity: 50,
-    status: "Belum Dihitung",
-  },
-  {
-    id: "3",
-    orderNumber: "ORD-2026-0902",
-    customerName: "Estella Glow Skincare",
-    brand: "Estella",
-    productName: "Softbox Skincare Serum Matte Doff",
-    orderQuantity: 5000,
-    paperType: "Kraft Liner Brown 275 GSM",
-    paperGsm: 275,
-    planoLengthCm: 120,
-    planoWidthCm: 90,
-    cutLengthCm: 22,
-    cutWidthCm: 14,
-    wastePercent: 6,
-    insheetQuantity: 250,
-    status: "BOM Selesai",
-  },
-];
+import {
+  useBomQueueStore,
+  syncBomToDownstream,
+  type OrderForBom,
+} from "@/services/operationalStore";
 
 export default function BomCalculatorPage() {
   const { user } = useAuth();
-  const [ordersQueue, setOrdersQueue] = useState<OrderForBom[]>(SAMPLE_ORDERS_QUEUE);
-  const [selectedOrder, setSelectedOrder] = useState<OrderForBom>(SAMPLE_ORDERS_QUEUE[0]);
+  const [ordersQueue, setOrdersQueue] = useBomQueueStore();
+  const [selectedOrder, setSelectedOrder] = useState<OrderForBom>(() => ordersQueue[0]);
 
   // Interactive Calculator State
   const [planoLength, setPlanoLength] = useState<number>(selectedOrder.planoLengthCm);
@@ -159,14 +92,32 @@ export default function BomCalculatorPage() {
           o.id === selectedOrder.id ? { ...o, status: "BOM Selesai" } : o
         )
       );
-      triggerToast(`Formula ${saved?.bom_code || "BOM"} berhasil disimpan ke database PostgreSQL dan siap diteruskan ke SPK!`);
+      const generatedSpk = syncBomToDownstream({
+        bomOrder: selectedOrder,
+        totalPlanoSheets: calculation.totalPlanoSheets,
+        cutsPerPlano: calculation.cutsPerPlano,
+        userName: user?.name,
+        userRole: user?.role_display,
+      });
+      triggerToast(
+        `Formula ${saved?.bom_code || "BOM"} berhasil disimpan & diteruskan ke Kanban Produksi (${generatedSpk})!`
+      );
     } catch {
       setOrdersQueue(
         ordersQueue.map((o) =>
           o.id === selectedOrder.id ? { ...o, status: "BOM Selesai" } : o
         )
       );
-      triggerToast(`Formula BOM untuk ${selectedOrder.orderNumber} berhasil disimpan.`);
+      const generatedSpk = syncBomToDownstream({
+        bomOrder: selectedOrder,
+        totalPlanoSheets: calculation.totalPlanoSheets,
+        cutsPerPlano: calculation.cutsPerPlano,
+        userName: user?.name,
+        userRole: user?.role_display,
+      });
+      triggerToast(
+        `Formula BOM untuk ${selectedOrder.orderNumber} berhasil disimpan & diteruskan ke Kanban Produksi (${generatedSpk})!`
+      );
     } finally {
       setSavingBom(false);
     }
